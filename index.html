@@ -407,9 +407,9 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
   </div>
 
   <div class="sidebar-footer">
-    <button onclick="sincronizarDrive()" id="btn-sync" title="Guardar en Google Drive">☁ Drive</button>
-    <button onclick="exportarJSON()">⬇ Local</button>
-    <button onclick="document.getElementById('importFile').click()">⬆ Import</button>
+    <button onclick="exportarJSON()" title="Descargar backup JSON">⬇ Backup</button>
+    <button onclick="sincronizarDrive()" title="Backup + abrir Drive">☁ Drive</button>
+    <button onclick="document.getElementById('importFile').click()" title="Restaurar desde backup">⬆ Restaurar</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarJSON(event)">
   </div>
 </nav>
@@ -839,7 +839,7 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
 
 <script>
 // ===== STATE =====
-const STORAGE_KEY = 'finanzasV91';
+const STORAGE_KEY = 'finanzasV90';
 const FINNHUB_API_KEY = 'd7g3dg1r01qqb8ri6t8gd7g3dg1r01qqb8ri6t90';
 
 const CAT_COLORS = {
@@ -1725,117 +1725,44 @@ function renderCharts() {
   });
 }
 
-// ===== GOOGLE DRIVE SYNC =====
-const DRIVE_FILE_ID   = '1HYC50fvTXpU2QfCaetQO52NvhRwT8S1B';
-const DRIVE_FOLDER_ID = '1yM3gh1yxft7JUDZInvxEcZtwxT1jQg9O';
-let driveToken        = localStorage.getItem('drive_token') || null;
-let driveTokenExpiry  = Number(localStorage.getItem('drive_token_expiry') || 0);
-let syncTimer         = null;
+// ===== BACKUP / DRIVE SIMPLE =====
+// Sin OAuth ni tokens — guardado local automático + descarga manual para Drive
+let syncTimer = null;
 
 function setDriveStatus(s) {
   const el = document.getElementById('driveStatus');
   if (!el) return;
-  const m = { ok:{t:'🟢 Drive',c:'var(--accent2)'}, syncing:{t:'🔄 Sync…',c:'var(--accent4)'},
-              error:{t:'🔴 Drive',c:'var(--danger)'}, offline:{t:'⚪ Drive',c:'var(--text3)'},
-              auth:{t:'🔑 Conectar',c:'var(--accent)'} };
+  const m = {
+    ok:      { t:'💾 Guardado', c:'var(--accent2)' },
+    syncing: { t:'💾 Guardando…', c:'var(--accent4)' },
+    error:   { t:'⚠ Error', c:'var(--danger)' },
+    offline: { t:'💾 Local', c:'var(--text3)' },
+  };
   const v = m[s]||m.offline;
   el.textContent=v.t; el.style.color=v.c; el.style.borderColor=v.c;
 }
 
-function tokenValido() { return driveToken && Date.now() < driveTokenExpiry - 60000; }
+function tokenValido() { return false; }
+function detectarTokenURL() {}
+function cargarDesdeDrive() {}
 
-function loginGoogle() {
-  // Google OAuth2 implicit flow
-  // INSTRUCCIONES: Para habilitar el login real, crea un proyecto en console.cloud.google.com,
-  // habilita la Drive API y crea credenciales OAuth "Aplicación web", luego reemplaza '' con tu CLIENT_ID
-  const CLIENT_ID = '';
-  if (!CLIENT_ID) {
-    toast('Para login automático configura CLIENT_ID. Por ahora usa ☁ Drive con token manual.','error');
-    const t = prompt('Pega tu Google OAuth2 Bearer Token (opcional):');
-    if (t && t.trim()) {
-      driveToken = t.trim();
-      driveTokenExpiry = Date.now() + 3600000;
-      localStorage.setItem('drive_token', driveToken);
-      localStorage.setItem('drive_token_expiry', String(driveTokenExpiry));
-      setDriveStatus('ok');
-      toast('Token guardado. Sincronizando…');
-      guardarEnDrive();
-    }
-    return;
-  }
-  const base = 'https://accounts.google.com/o/oauth2/v2/auth';
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: window.location.href.split('?')[0].split('#')[0],
-    response_type: 'token',
-    scope: 'https://www.googleapis.com/auth/drive.file'
-  });
-  window.location.href = base + '?' + params;
-}
-
-function detectarTokenURL() {
-  const hash = window.location.hash;
-  if (!hash.includes('access_token=')) return;
-  const p = new URLSearchParams(hash.substring(1));
-  driveToken = p.get('access_token');
-  driveTokenExpiry = Date.now() + Number(p.get('expires_in')||3600)*1000;
-  localStorage.setItem('drive_token', driveToken);
-  localStorage.setItem('drive_token_expiry', String(driveTokenExpiry));
-  window.history.replaceState({}, document.title, window.location.pathname);
-  toast('✅ Conectado a Google Drive');
-  setDriveStatus('ok');
-}
-
-async function cargarDesdeDrive() {
-  if (!tokenValido()) { setDriveStatus('auth'); return; }
-  setDriveStatus('syncing');
-  try {
-    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media`,
-      { headers: { Authorization: `Bearer ${driveToken}` } });
-    if (!r.ok) throw new Error(r.status);
-    const data = await r.json();
-    state = { ...state, ...data };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    renderAll();
-    setDriveStatus('ok');
-    toast('✅ Sincronizado desde Drive');
-  } catch(e) {
-    console.error(e);
-    setDriveStatus('error');
-    toast('Error al leer Drive — datos locales activos','error');
-  }
-}
-
-async function guardarEnDrive() {
-  if (!tokenValido()) { setDriveStatus('auth'); return; }
-  setDriveStatus('syncing');
-  try {
-    if (!state.meta) state.meta = {};
-    state.meta.ultimaActualizacion = new Date().toISOString().slice(0,10);
-    const r = await fetch(
-      `https://www.googleapis.com/upload/drive/v3/files/${DRIVE_FILE_ID}?uploadType=media`,
-      { method:'PATCH', headers:{ Authorization:`Bearer ${driveToken}`, 'Content-Type':'application/json' },
-        body: JSON.stringify(state, null, 2) });
-    if (!r.ok) throw new Error(r.status);
-    setDriveStatus('ok');
-    const t = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
-    const el = document.getElementById('lastSaved');
-    if (el) el.textContent = `☁ ${t}`;
-  } catch(e) {
-    console.error(e);
-    setDriveStatus('error');
-  }
+function sincronizarDrive() {
+  // Exporta JSON y abre Google Drive para que el usuario lo suba manualmente
+  exportarJSON();
+  setTimeout(() => {
+    window.open('https://drive.google.com/drive/folders/1yM3gh1yxft7JUDZInvxEcZtwxT1jQg9O', '_blank');
+    toast('📁 Archivo descargado — súbelo a la carpeta FinanzasApp en Drive que se abrió', 'success');
+  }, 800);
 }
 
 function scheduleDriveSync() {
   clearTimeout(syncTimer);
-  syncTimer = setTimeout(()=>guardarEnDrive(), 2500);
-}
-
-function sincronizarDrive() {
-  if (!tokenValido()) { loginGoogle(); return; }
-  guardarEnDrive();
-  toast('Guardando en Drive…');
+  syncTimer = setTimeout(() => {
+    setDriveStatus('ok');
+    const t = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    const el = document.getElementById('lastSaved');
+    if (el) el.textContent = `💾 ${t}`;
+  }, 1000);
 }
 
 // ===== EXPORT / IMPORT LOCAL =====
@@ -1995,12 +1922,8 @@ if (!state.cierresMensuales) state.cierresMensuales = [];
 if (!state.meta) state.meta = { version:'9.1' };
 
 renderAll();
-setDriveStatus(tokenValido() ? 'ok' : 'offline');
-if (tokenValido()) {
-  cargarDesdeDrive();
-} else {
-  setTimeout(()=>toast('💡 Presiona ☁ Drive para sincronizar en la nube'),1000);
-}
+setDriveStatus('offline');
+
 const today = new Date().toISOString().slice(0,10);
 ['ing-fecha','gas-fecha'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
 </script>
