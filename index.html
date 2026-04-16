@@ -694,11 +694,20 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
           <option value="Otro">📌 Otro</option>
         </select>
       </div>
-      <div class="form-group"><label>Cuenta</label>
+      <div class="form-group"><label>Cuenta / Tarjeta</label>
         <select id="gas-cuenta">
-          <option>Nequi</option><option>Nequi Negocios</option>
-          <option>Daviplata</option><option selected>Bancolombia</option>
-          <option>Davivienda</option><option>PayPal</option><option>Efectivo</option>
+          <optgroup label="Cuentas bancarias">
+            <option>Nequi</option><option>Nequi Negocios</option>
+            <option>Daviplata</option><option selected>Bancolombia</option>
+            <option>Davivienda</option><option>PayPal</option><option>Efectivo</option>
+          </optgroup>
+          <optgroup label="Tarjetas de crédito">
+            <option value="TC Visa *8535">💳 Visa *8535</option>
+            <option value="TC Mastercard *8089">💳 Mastercard *8089</option>
+            <option value="TC Mastercard *7443">💳 Mastercard *7443</option>
+            <option value="TC Visa *3995">💳 Visa *3995</option>
+            <option value="TC Amex *1951">💳 Amex *1951</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -1053,6 +1062,17 @@ function ajustarCuenta(cuenta, delta) {
   else if (cuenta==='Bancolombia') c.bancolombia+=delta;
   else if (cuenta==='Davivienda') c.davivienda+=delta;
   else if (cuenta==='PayPal') c.paypal+=delta;
+  else if (cuenta && cuenta.startsWith('TC ')) {
+    // Gasto con tarjeta: aumenta el saldo de la tarjeta (delta negativo = más deuda)
+    const digitos = cuenta.split('*')[1];
+    if (digitos) {
+      const tarjeta = state.tarjetas.find(t => t.digitos === digitos);
+      if (tarjeta) {
+        // delta negativo significa gasto, así que restamos para aumentar saldo
+        tarjeta.saldo = Math.max(0, tarjeta.saldo - delta);
+      }
+    }
+  }
 }
 
 // ===== INGRESOS =====
