@@ -397,12 +397,19 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
     <button class="nav-btn" onclick="showSection('tarjetas')"><span class="icon">💳</span> Tarjetas</button>
     <button class="nav-btn" onclick="showSection('deudas')"><span class="icon">📋</span> Deudas</button>
     <button class="nav-btn" onclick="showSection('patrimonio')"><span class="icon">📈</span> Patrimonio</button>
+    <button class="nav-btn" onclick="showSection('analisis')"><span class="icon">🔬</span> Análisis</button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Análisis</div>
+    <button class="nav-btn" onclick="showSection('analisis')"><span class="icon">📊</span> Análisis deuda</button>
   </div>
 
   <div class="nav-group">
     <div class="nav-label">Nómina</div>
     <button class="nav-btn" onclick="showSection('konrad')"><span class="icon">🏫</span> Konrad</button>
     <button class="nav-btn" onclick="showSection('cuentas')"><span class="icon">🏦</span> Cuentas</button>
+    <button class="nav-btn" onclick="showSection('pagos')"><span class="icon">🔔</span> Por pagar</button>
     <button class="nav-btn" onclick="showSection('cierres')"><span class="icon">📸</span> Cierres</button>
   </div>
 
@@ -605,6 +612,126 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
         </div>
       </div>
       <div class="accounts-grid" id="accounts-display"></div>
+    </section>
+
+    <!-- ANÁLISIS FINANCIERO -->
+    <section id="sec-analisis" class="section">
+      <div class="section-header"><h2>🔬 Análisis financiero</h2></div>
+
+      <!-- Índice de endeudamiento -->
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:16px;font-size:14px">Índice de endeudamiento</h3>
+        <div class="cards-grid" id="analisis-cards"></div>
+        <div style="margin-top:16px" id="analisis-semaforo"></div>
+      </div>
+
+      <!-- Desglose por deuda -->
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:16px;font-size:14px">Costo mensual por deuda</h3>
+        <div id="analisis-deudas-detalle"></div>
+      </div>
+
+      <!-- Simulador de pago extra -->
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:4px;font-size:14px">Simulador — pago extra mensual</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:16px">¿Cuánto ahorras si pagas un extra cada mes?</p>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+          <div class="form-group" style="flex:1;min-width:200px">
+            <label>Deuda a acelerar</label>
+            <select id="sim-deuda-sel" onchange="actualizarSimulador()"></select>
+          </div>
+          <div class="form-group" style="flex:1;min-width:180px">
+            <label>Pago extra mensual (COP)</label>
+            <input type="number" id="sim-extra" value="200000" step="50000" oninput="actualizarSimulador()">
+          </div>
+        </div>
+        <div id="sim-resultado"></div>
+      </div>
+
+      <!-- Proyección gráfica -->
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:4px;font-size:14px">Proyección — evolución de deudas</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:16px">Cómo se reduce cada deuda mes a mes pagando la cuota normal</p>
+        <canvas id="chart-proyeccion" height="220"></canvas>
+      </div>
+
+      <!-- Estrategia recomendada -->
+      <div class="form-card">
+        <h3 style="margin-bottom:16px;font-size:14px">Estrategia de pago recomendada</h3>
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="mostrarEstrategia('avalancha')" id="btn-avalancha">🏔 Avalancha</button>
+          <button class="btn btn-outline btn-sm" onclick="mostrarEstrategia('bola')" id="btn-bola">⛄ Bola de nieve</button>
+        </div>
+        <div id="estrategia-resultado"></div>
+      </div>
+    </section>
+
+    <!-- ANÁLISIS FINANCIERO -->
+    <section id="sec-analisis" class="section">
+      <div class="section-header"><h2>📊 Análisis de deuda y proyección</h2></div>
+
+      <!-- Índice de endeudamiento -->
+      <div class="cards-grid" id="analisis-cards"></div>
+
+      <!-- Simulador de pago extra -->
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:14px;font-size:14px">⚡ Simulador — ¿Qué pasa si pago más?</h3>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div class="form-group" style="min-width:200px">
+            <label>Pago extra mensual (COP)</label>
+            <input type="number" id="sim-extra" value="500000" oninput="renderAnalisis()">
+          </div>
+          <div class="form-group" style="min-width:200px">
+            <label>Aplicar estrategia</label>
+            <select id="sim-estrategia" onchange="renderAnalisis()">
+              <option value="avalancha">🏔 Avalancha (mayor interés primero)</option>
+              <option value="bola">⛄ Bola de nieve (menor saldo primero)</option>
+            </select>
+          </div>
+        </div>
+        <div id="sim-resultado" style="margin-top:14px"></div>
+      </div>
+
+      <!-- Proyección por deuda -->
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:16px;font-size:14px">📅 Proyección por crédito</h3>
+        <div id="proyeccion-deudas"></div>
+      </div>
+
+      <!-- Gráfico evolución deuda -->
+      <div class="chart-card">
+        <div class="chart-title">Evolución proyectada del total de deuda</div>
+        <canvas id="chart-deuda-proyeccion" height="200"></canvas>
+      </div>
+    </section>
+
+    <!-- CUENTAS POR PAGAR -->
+    <section id="sec-pagos" class="section">
+      <div class="section-header">
+        <h2>🔔 Cuentas por pagar</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-pago')">+ Agregar</button>
+      </div>
+
+      <!-- Resumen rápido -->
+      <div class="cards-grid" id="pagos-resumen"></div>
+
+      <!-- Filtros -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="pagos-filtros">
+        <button class="btn btn-primary btn-sm" onclick="filtrarPagos('todos')">Todos</button>
+        <button class="btn btn-outline btn-sm" onclick="filtrarPagos('pendiente')">⏳ Pendientes</button>
+        <button class="btn btn-outline btn-sm" onclick="filtrarPagos('vencido')">🔴 Vencidos</button>
+        <button class="btn btn-outline btn-sm" onclick="filtrarPagos('pagado')">✅ Pagados</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Descripción</th><th>Categoría</th><th>Monto</th>
+            <th>Vence</th><th>Días</th><th>Estado</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbody-pagos"></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- CIERRES MENSUALES -->
@@ -843,6 +970,55 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
   </div>
 </div>
 
+<!-- Modal Pago Pendiente -->
+<div class="modal-overlay" id="modal-pago">
+  <div class="modal">
+    <h3 id="modal-pago-title">Nueva cuenta por pagar</h3>
+    <input type="hidden" id="pago-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Descripción</label>
+        <input type="text" id="pago-desc" placeholder="Ej: Administración enero">
+      </div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="pago-cat">
+          <option value="Administración">🏢 Administración</option>
+          <option value="Servicios públicos">💡 Servicios públicos</option>
+          <option value="Internet/Telefonía">📱 Internet / Telefonía</option>
+          <option value="Nómina">👥 Nómina</option>
+          <option value="Arriendo">🏠 Arriendo</option>
+          <option value="Salud">🏥 Salud</option>
+          <option value="Educación">📚 Educación</option>
+          <option value="Impuestos">🏛 Impuestos</option>
+          <option value="Seguro">🛡 Seguro</option>
+          <option value="Otro">📌 Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Monto (COP)</label>
+        <input type="number" id="pago-monto" placeholder="0">
+      </div>
+      <div class="form-group"><label>Fecha límite de pago</label>
+        <input type="date" id="pago-fecha">
+      </div>
+      <div class="form-group"><label>Recurrencia</label>
+        <select id="pago-recurrencia">
+          <option value="unico">Solo esta vez</option>
+          <option value="mensual">Mensual</option>
+          <option value="bimestral">Bimestral</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Notas (opcional)</label>
+        <input type="text" id="pago-notas" placeholder="Ej: Enviar a contabilidad">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-pago')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarPago()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -995,7 +1171,8 @@ const sectionTitles = {
   dashboard: 'Dashboard', ingresos: 'Ingresos', gastos: 'Gastos',
   presupuesto: 'Presupuesto', tarjetas: 'Tarjetas de crédito',
   deudas: 'Deudas', patrimonio: 'Patrimonio', konrad: 'Nómina Konrad',
-  cuentas: 'Cuentas bancarias', cierres: '📸 Fotografía financiera mensual'
+  cuentas: 'Cuentas bancarias', cierres: '📸 Fotografía financiera mensual',
+  pagos: '🔔 Cuentas por pagar', analisis: '📊 Análisis de deuda y proyección', analisis: '🔬 Análisis financiero'
 };
 
 function showSection(id) {
@@ -1012,7 +1189,10 @@ function showSection(id) {
   if (id === 'presupuesto') renderPresupuesto();
   if (id === 'patrimonio') { renderAcciones(); renderFondos(); renderPatrimonioCards(); }
   if (id === 'tarjetas') renderTarjetas();
+  if (id === 'analisis') renderAnalisis();
   if (id === 'cierres') renderCierres();
+  if (id === 'pagos') renderPagos();
+  if (id === 'analisis') renderAnalisis();
   if (id === 'cuentas') renderCuentas();
 }
 
@@ -1950,7 +2130,721 @@ function guardarEstado() {
   scheduleDriveSync();
 }
 
-// ===== RENDER ALL =====
+// ===== ANÁLISIS FINANCIERO =====
+let estrategiaActual = 'avalancha';
+
+function calcularCuotaDeuda(deuda) {
+  // Si tiene cuotas totales y pagadas, estima la cuota mensual
+  if (deuda.cuotasTotales && deuda.cuotasPagadas) {
+    const restantes = deuda.cuotasTotales - deuda.cuotasPagadas;
+    if (restantes <= 0) return 0;
+    const tasaMensual = (deuda.tasa || 0) / 100 / 12;
+    if (tasaMensual === 0) return deuda.monto / restantes;
+    return deuda.monto * tasaMensual / (1 - Math.pow(1 + tasaMensual, -restantes));
+  }
+  return 0;
+}
+
+function calcularInteresMensual(deuda) {
+  const tasaMensual = (deuda.tasa || 0) / 100 / 12;
+  return deuda.monto * tasaMensual;
+}
+
+function renderAnalisis() {
+  const ingresoMensual = state.ingresos
+    .filter(i => i.fecha && i.fecha.startsWith(mesActual()))
+    .reduce((s, i) => s + i.monto, 0) ||
+    state.ingresos.slice(-3).reduce((s, i) => s + i.monto, 0) / 3 || 7909571;
+
+  const todasDeudas = [
+    ...state.deudas,
+    ...state.tarjetas.filter(t => t.saldo > 0).map(t => ({
+      id: t.id,
+      descripcion: `TC ${t.nombre} *${t.digitos}`,
+      monto: t.saldo,
+      tasa: 25.5,
+      cuotasTotales: 24,
+      cuotasPagadas: 0,
+      esTarjeta: true,
+      pagoMinimo: t.pagoMinimo
+    }))
+  ];
+
+  const totalDeuda = todasDeudas.reduce((s, d) => s + d.monto, 0);
+  const totalCuotas = todasDeudas.reduce((s, d) => {
+    if (d.esTarjeta) return s + (d.pagoMinimo || 0);
+    return s + calcularCuotaDeuda(d);
+  }, 0);
+  const totalIntereses = todasDeudas.reduce((s, d) => s + calcularInteresMensual(d), 0);
+  const pctEndeudamiento = ingresoMensual > 0 ? (totalCuotas / ingresoMensual * 100) : 0;
+
+  // Cards resumen
+  const cardsDiv = document.getElementById('analisis-cards');
+  if (cardsDiv) cardsDiv.innerHTML = `
+    <div class="card ${pctEndeudamiento > 50 ? 'red' : pctEndeudamiento > 40 ? 'yellow' : 'green'}">
+      <div class="card-label">% Ingreso en deudas</div>
+      <div class="card-value ${pctEndeudamiento > 40 ? 'negative' : 'positive'}">${pctEndeudamiento.toFixed(1)}%</div>
+      <div class="card-sub">Recomendado: máx 40%</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Intereses mensuales</div>
+      <div class="card-value negative">${cop(Math.round(totalIntereses))}</div>
+      <div class="card-sub">Lo que no se abona a capital</div>
+    </div>
+    <div class="card blue">
+      <div class="card-label">Cuotas mensuales</div>
+      <div class="card-value">${cop(Math.round(totalCuotas))}</div>
+      <div class="card-sub">${todasDeudas.length} obligaciones</div>
+    </div>
+    <div class="card ${totalDeuda > 200000000 ? 'red' : 'yellow'}">
+      <div class="card-label">Deuda total</div>
+      <div class="card-value negative">${cop(Math.round(totalDeuda))}</div>
+      <div class="card-sub">Préstamos + Tarjetas</div>
+    </div>
+  `;
+
+  // Semáforo
+  const semaforoDiv = document.getElementById('analisis-semaforo');
+  if (semaforoDiv) {
+    const color = pctEndeudamiento > 50 ? 'var(--danger)' : pctEndeudamiento > 40 ? 'var(--warning)' : 'var(--accent2)';
+    const msg = pctEndeudamiento > 50
+      ? '🔴 Nivel crítico — más de la mitad de tu ingreso va a deudas. Prioriza reducir las de mayor tasa.'
+      : pctEndeudamiento > 40
+      ? '🟡 Nivel alto — estás cerca del límite recomendado. Evita contraer nuevas deudas.'
+      : '🟢 Nivel manejable — tu carga de deuda está dentro del rango aceptable.';
+    semaforoDiv.innerHTML = `
+      <div style="background:${color}18;border:1px solid ${color}44;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text)">
+        ${msg}
+      </div>`;
+  }
+
+  // Desglose por deuda
+  const detDiv = document.getElementById('analisis-deudas-detalle');
+  if (detDiv) {
+    detDiv.innerHTML = todasDeudas.sort((a, b) => calcularInteresMensual(b) - calcularInteresMensual(a)).map(d => {
+      const cuota = d.esTarjeta ? (d.pagoMinimo || 0) : calcularCuotaDeuda(d);
+      const interes = calcularInteresMensual(d);
+      const capital = Math.max(0, cuota - interes);
+      const pctInteres = cuota > 0 ? interes / cuota * 100 : 0;
+      const restantes = d.cuotasTotales ? d.cuotasTotales - (d.cuotasPagadas || 0) : '—';
+      return `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span style="font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif">${d.descripcion}</span>
+            <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${cop(Math.round(cuota))}/mes</span>
+          </div>
+          <div style="display:flex;gap:4px;margin-bottom:6px">
+            <div style="height:6px;border-radius:3px 0 0 3px;background:var(--danger);width:${pctInteres.toFixed(0)}%;min-width:${interes>0?'4px':'0'}" title="Intereses"></div>
+            <div style="height:6px;border-radius:0 3px 3px 0;background:var(--accent2);flex:1" title="Capital"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);font-family:'DM Sans',sans-serif">
+            <span>🔴 Intereses: ${cop(Math.round(interes))} (${pctInteres.toFixed(0)}%)</span>
+            <span>🟢 Capital: ${cop(Math.round(capital))}</span>
+            <span>Cuotas rest.: ${restantes}</span>
+            <span>Tasa: ${d.tasa || 0}% EA</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Llenar selector simulador
+  const sel = document.getElementById('sim-deuda-sel');
+  if (sel) {
+    sel.innerHTML = state.deudas.map(d =>
+      `<option value="${d.id}">${d.descripcion} — ${cop(d.monto)}</option>`
+    ).join('');
+    actualizarSimulador();
+  }
+
+  // Proyección gráfica
+  renderProyeccion(todasDeudas);
+
+  // Estrategia inicial
+  mostrarEstrategia('avalancha');
+}
+
+function actualizarSimulador() {
+  const sel = document.getElementById('sim-deuda-sel');
+  const extraEl = document.getElementById('sim-extra');
+  const res = document.getElementById('sim-resultado');
+  if (!sel || !extraEl || !res) return;
+
+  const deuda = state.deudas.find(d => d.id == sel.value);
+  if (!deuda) return;
+
+  const extra = Number(extraEl.value) || 0;
+  const tasaMensual = (deuda.tasa || 0) / 100 / 12;
+  const restantes = deuda.cuotasTotales ? deuda.cuotasTotales - (deuda.cuotasPagadas || 0) : 60;
+  const cuotaNormal = calcularCuotaDeuda(deuda);
+  const cuotaConExtra = cuotaNormal + extra;
+
+  // Simular sin extra
+  let saldo = deuda.monto;
+  let mesesNormal = 0, interesNormal = 0;
+  while (saldo > 0 && mesesNormal < 600) {
+    const int = saldo * tasaMensual;
+    const cap = Math.min(cuotaNormal - int, saldo);
+    interesNormal += int;
+    saldo -= Math.max(0, cap);
+    mesesNormal++;
+  }
+
+  // Simular con extra
+  saldo = deuda.monto;
+  let mesesExtra = 0, interesExtra = 0;
+  while (saldo > 0 && mesesExtra < 600) {
+    const int = saldo * tasaMensual;
+    const cap = Math.min(cuotaConExtra - int, saldo);
+    interesExtra += int;
+    saldo -= Math.max(0, cap);
+    mesesExtra++;
+  }
+
+  const ahorroIntereses = interesNormal - interesExtra;
+  const ahorroMeses = mesesNormal - mesesExtra;
+  const terminaNormal = new Date();
+  terminaNormal.setMonth(terminaNormal.getMonth() + mesesNormal);
+  const terminaExtra = new Date();
+  terminaExtra.setMonth(terminaExtra.getMonth() + mesesExtra);
+
+  res.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Sin pago extra</div>
+        <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--text)">${mesesNormal} meses</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Termina: ${terminaNormal.toLocaleDateString('es-CO',{month:'short',year:'numeric'})}</div>
+        <div style="font-size:11px;color:var(--accent3);margin-top:2px">Intereses: ${cop(Math.round(interesNormal))}</div>
+      </div>
+      <div style="background:rgba(56,201,139,0.1);border:1px solid var(--accent2);border-radius:var(--radius-sm);padding:12px">
+        <div style="font-size:11px;color:var(--accent2);margin-bottom:4px">Con +${cop(extra)}/mes</div>
+        <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--accent2)">${mesesExtra} meses</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Termina: ${terminaExtra.toLocaleDateString('es-CO',{month:'short',year:'numeric'})}</div>
+        <div style="font-size:11px;color:var(--accent2);margin-top:2px">Intereses: ${cop(Math.round(interesExtra))}</div>
+      </div>
+    </div>
+    ${ahorroIntereses > 0 ? `
+    <div style="background:rgba(56,201,139,0.08);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--text)">
+      💡 Pagarías <strong style="color:var(--accent2)">${ahorroMeses} meses menos</strong> y ahorrarías 
+      <strong style="color:var(--accent2)">${cop(Math.round(ahorroIntereses))}</strong> en intereses
+    </div>` : ''}
+  `;
+}
+
+function renderProyeccion(todasDeudas) {
+  destroyChart('proyeccion');
+  const ctx = document.getElementById('chart-proyeccion');
+  if (!ctx) return;
+
+  const maxMeses = 60;
+  const labels = Array.from({length: maxMeses}, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + i);
+    return d.toLocaleDateString('es-CO', {month:'short', year:'2-digit'});
+  });
+
+  const datasets = state.deudas.slice(0, 4).map((d, idx) => {
+    const colores = ['#4f8ef7','#f7724f','#38c98b','#f0c040'];
+    const tasaMensual = (d.tasa || 0) / 100 / 12;
+    const cuota = calcularCuotaDeuda(d);
+    let saldo = d.monto;
+    const data = [saldo];
+    for (let i = 1; i < maxMeses; i++) {
+      if (saldo <= 0) { data.push(0); continue; }
+      const int = saldo * tasaMensual;
+      const cap = Math.max(0, Math.min(cuota - int, saldo));
+      saldo = Math.max(0, saldo - cap);
+      data.push(Math.round(saldo));
+    }
+    return {
+      label: d.descripcion.slice(0, 25),
+      data,
+      borderColor: colores[idx],
+      backgroundColor: colores[idx] + '18',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      borderWidth: 2
+    };
+  });
+
+  charts.proyeccion = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8a92a8', font: { size: 11 }, boxWidth: 10 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-CO')}`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#5a6278', maxTicksLimit: 12 }, grid: { color: '#1e2433' } },
+        y: {
+          ticks: {
+            color: '#5a6278',
+            callback: v => v >= 1000000 ? (v/1000000).toFixed(0)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v
+          },
+          grid: { color: '#1e2433' }
+        }
+      }
+    }
+  });
+}
+
+function mostrarEstrategia(tipo) {
+  estrategiaActual = tipo;
+  document.getElementById('btn-avalancha').className = tipo === 'avalancha' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+  document.getElementById('btn-bola').className = tipo === 'bola' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+
+  const div = document.getElementById('estrategia-resultado');
+  if (!div) return;
+
+  const deudas = [...state.deudas].filter(d => d.monto > 0);
+  if (!deudas.length) { div.innerHTML = '<p style="color:var(--text3);font-size:13px">No hay deudas registradas.</p>'; return; }
+
+  const ordenadas = tipo === 'avalancha'
+    ? [...deudas].sort((a, b) => (b.tasa || 0) - (a.tasa || 0))
+    : [...deudas].sort((a, b) => a.monto - b.monto);
+
+  const titulo = tipo === 'avalancha'
+    ? '🏔 Avalancha — paga primero la de mayor tasa de interés. Ahorras más dinero en total.'
+    : '⛄ Bola de nieve — paga primero la más pequeña. Ganarás motivación con victorias rápidas.';
+
+  div.innerHTML = `
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7">${titulo}</p>
+    ${ordenadas.map((d, i) => {
+      const tasaMensual = (d.tasa || 0) / 100 / 12;
+      const cuota = calcularCuotaDeuda(d);
+      const interes = calcularInteresMensual(d);
+      const restantes = d.cuotasTotales ? d.cuotasTotales - (d.cuotasPagadas || 0) : '?';
+      return `
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="min-width:28px;height:28px;border-radius:50%;background:${i===0?'var(--accent)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:${i===0?'#fff':'var(--text3)'}">
+            ${i + 1}
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;color:var(--text);margin-bottom:3px;font-family:'DM Sans',sans-serif">${d.descripcion}</div>
+            <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);flex-wrap:wrap">
+              <span>Saldo: <strong style="color:var(--accent3)">${cop(Math.round(d.monto))}</strong></span>
+              <span>Tasa: <strong style="color:var(--text2)">${d.tasa || 0}% EA</strong></span>
+              <span>Interés/mes: <strong style="color:var(--danger)">${cop(Math.round(interes))}</strong></span>
+              <span>Cuotas rest.: <strong style="color:var(--text2)">${restantes}</strong></span>
+            </div>
+          </div>
+          ${i === 0 ? `<span style="font-size:10px;background:rgba(79,142,247,0.15);color:var(--accent);padding:3px 8px;border-radius:20px;white-space:nowrap">Atacar primero</span>` : ''}
+        </div>`;
+    }).join('')}
+  `;
+}
+
+// ===== ANÁLISIS FINANCIERO =====
+function calcularCuotaMensual(saldo, tasaAnual, cuotasRestantes) {
+  if (!saldo || !cuotasRestantes) return 0;
+  if (!tasaAnual) return saldo / cuotasRestantes;
+  const r = tasaAnual / 100 / 12;
+  return saldo * r * Math.pow(1+r, cuotasRestantes) / (Math.pow(1+r, cuotasRestantes) - 1);
+}
+
+function mesesHastaTerminar(saldo, tasaAnual, cuotaMensual) {
+  if (!saldo || !cuotaMensual) return 0;
+  if (!tasaAnual) return Math.ceil(saldo / cuotaMensual);
+  const r = tasaAnual / 100 / 12;
+  if (cuotaMensual <= saldo * r) return 999; // nunca termina
+  return Math.ceil(-Math.log(1 - saldo * r / cuotaMensual) / Math.log(1 + r));
+}
+
+function totalIntereses(saldo, tasaAnual, cuotaMensual, meses) {
+  return Math.max(0, cuotaMensual * meses - saldo);
+}
+
+function fechaTerminacion(meses) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + meses);
+  return d.toLocaleDateString('es-CO', { year:'numeric', month:'long' });
+}
+
+function renderAnalisis() {
+  const ingMes = state.ingresos
+    .filter(i => i.fecha && i.fecha.startsWith(mesActual()))
+    .reduce((s,i) => s+i.monto, 0);
+
+  const deudas = state.deudas || [];
+  const tarjetas = state.tarjetas || [];
+
+  // Construir lista unificada de deudas para análisis
+  const lista = [
+    ...deudas.map(d => ({
+      nombre: d.descripcion,
+      saldo: d.monto || 0,
+      tasa: d.tasa || 0,
+      cuotasRestantes: d.cuotasTotales ? Math.max((d.cuotasTotales||0)-(d.cuotasPagadas||0),1) : 36,
+      tipo: 'credito'
+    })),
+    ...tarjetas.filter(t => t.saldo > 0).map(t => ({
+      nombre: `${t.nombre} *${t.digitos}`,
+      saldo: t.saldo || 0,
+      tasa: 25.5,
+      cuotasRestantes: 24,
+      tipo: 'tarjeta'
+    }))
+  ];
+
+  const totalDeuda = lista.reduce((s,d) => s+d.saldo, 0);
+  const cuotasTotalesMes = lista.reduce((s,d) => {
+    return s + calcularCuotaMensual(d.saldo, d.tasa, d.cuotasRestantes);
+  }, 0);
+  const pctEndeudamiento = ingMes > 0 ? (cuotasTotalesMes / ingMes * 100) : 0;
+  const colorPct = pctEndeudamiento > 50 ? 'var(--danger)' : pctEndeudamiento > 35 ? 'var(--warning)' : 'var(--accent2)';
+
+  // Cards resumen
+  const cardsDiv = document.getElementById('analisis-cards');
+  if (cardsDiv) cardsDiv.innerHTML = `
+    <div class="card ${pctEndeudamiento>50?'red':pctEndeudamiento>35?'yellow':'green'}">
+      <div class="card-label">Índice de endeudamiento</div>
+      <div class="card-value" style="color:${colorPct}">${pctEndeudamiento.toFixed(1)}%</div>
+      <div class="card-sub">${pctEndeudamiento>50?'⚠ Crítico':pctEndeudamiento>35?'⚠ Elevado':'✓ Saludable'} — máx recomendado 35%</div>
+    </div>
+    <div class="card blue">
+      <div class="card-label">Cuotas mensuales totales</div>
+      <div class="card-value">${cop(Math.round(cuotasTotalesMes))}</div>
+      <div class="card-sub">de ${cop(ingMes)} de ingreso</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Total deuda actual</div>
+      <div class="card-value negative">${cop(totalDeuda)}</div>
+      <div class="card-sub">${lista.length} obligaciones</div>
+    </div>
+    <div class="card yellow">
+      <div class="card-label">Intereses estimados/mes</div>
+      <div class="card-value" style="color:var(--accent4)">${cop(Math.round(lista.reduce((s,d)=>s+(d.saldo*(d.tasa/100/12)),0)))}</div>
+      <div class="card-sub">solo en intereses</div>
+    </div>
+  `;
+
+  // Simulador
+  const extra = Number(document.getElementById('sim-extra')?.value||0);
+  const estrategia = document.getElementById('sim-estrategia')?.value||'avalancha';
+  const simDiv = document.getElementById('sim-resultado');
+
+  if (simDiv && lista.length > 0) {
+    // Sin pago extra
+    const mesesSin = Math.max(...lista.map(d => mesesHastaTerminar(d.saldo, d.tasa, calcularCuotaMensual(d.saldo, d.tasa, d.cuotasRestantes))));
+    const intSin = lista.reduce((s,d) => {
+      const c = calcularCuotaMensual(d.saldo, d.tasa, d.cuotasRestantes);
+      const m = mesesHastaTerminar(d.saldo, d.tasa, c);
+      return s + totalIntereses(d.saldo, d.tasa, c, m);
+    }, 0);
+
+    // Con pago extra — ordenar según estrategia
+    const ordenada = [...lista].sort((a,b) =>
+      estrategia==='avalancha' ? b.tasa-a.tasa : a.saldo-b.saldo
+    );
+    const primeraNombre = ordenada[0]?.nombre || '';
+    const primeraC = calcularCuotaMensual(ordenada[0]?.saldo||0, ordenada[0]?.tasa||0, ordenada[0]?.cuotasRestantes||1);
+    const mesesCon = mesesHastaTerminar(ordenada[0]?.saldo||0, ordenada[0]?.tasa||0, primeraC + extra);
+    const ahorraMeses = Math.max(0, mesesHastaTerminar(ordenada[0]?.saldo||0, ordenada[0]?.tasa||0, primeraC) - mesesCon);
+    const ahorraIntereses = Math.round(extra * ahorraMeses * 0.7);
+
+    simDiv.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div style="background:var(--bg3);border-radius:8px;padding:12px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">SIN pago extra</div>
+          <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--accent3)">~${mesesSin} meses</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Intereses: ${cop(Math.round(intSin))}</div>
+        </div>
+        <div style="background:rgba(56,201,139,0.1);border:1px solid var(--accent2);border-radius:8px;padding:12px">
+          <div style="font-size:11px;color:var(--accent2);margin-bottom:4px">CON +${cop(extra)}/mes a ${estrategia==='avalancha'?'mayor interés':'menor saldo'}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--accent2)">Ahorras ~${ahorraMeses} meses</div>
+          <div style="font-size:12px;color:var(--accent2);margin-top:2px">~${cop(ahorraIntereses)} menos en intereses</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);padding:8px;background:var(--bg3);border-radius:6px">
+        💡 <strong style="color:var(--text)">Estrategia ${estrategia==='avalancha'?'Avalancha':'Bola de nieve'}:</strong>
+        Aplica el pago extra a <strong style="color:var(--accent)">${primeraNombre}</strong>
+        ${estrategia==='avalancha'?' (tasa más alta — te ahorra más intereses)':' (saldo más bajo — te da victorias rápidas)'}
+      </div>`;
+  }
+
+  // Proyección por deuda
+  const proyDiv = document.getElementById('proyeccion-deudas');
+  if (proyDiv) {
+    proyDiv.innerHTML = lista.map(d => {
+      const cuota = calcularCuotaMensual(d.saldo, d.tasa, d.cuotasRestantes);
+      const meses = mesesHastaTerminar(d.saldo, d.tasa, cuota);
+      const intTotal = totalIntereses(d.saldo, d.tasa, cuota, meses);
+      const pct = Math.min(100, ((d.cuotasRestantes > 0 ? 1 : 0) * 100));
+      const colorTasa = d.tasa > 20 ? 'var(--danger)' : d.tasa > 12 ? 'var(--warning)' : 'var(--accent2)';
+      return `
+        <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:13px;font-weight:500;color:var(--text)">${d.nombre}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">
+                Tasa: <span style="color:${colorTasa}">${d.tasa}% EA</span> ·
+                Cuota aprox: <span style="font-family:'DM Mono',monospace">${cop(Math.round(cuota))}</span>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--accent3)">${cop(d.saldo)}</div>
+              <div style="font-size:11px;color:var(--text3)">saldo actual</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div style="background:var(--bg3);border-radius:6px;padding:8px 12px;flex:1;min-width:120px">
+              <div style="font-size:10px;color:var(--text3)">Terminas en</div>
+              <div style="font-size:14px;font-weight:500;color:var(--accent)">${meses < 999 ? fechaTerminacion(meses) : 'Indefinido'}</div>
+              <div style="font-size:11px;color:var(--text3)">${meses < 999 ? `~${meses} meses` : '—'}</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:6px;padding:8px 12px;flex:1;min-width:120px">
+              <div style="font-size:10px;color:var(--text3)">Pagarás en intereses</div>
+              <div style="font-size:14px;font-weight:500;color:var(--accent3)">${cop(Math.round(intTotal))}</div>
+              <div style="font-size:11px;color:var(--text3)">${d.saldo > 0 ? ((intTotal/d.saldo*100).toFixed(0))+'% del saldo' : ''}</div>
+            </div>
+          </div>
+        </div>`;
+    }).join('') || '<div class="empty-state">Sin deudas registradas</div>';
+  }
+
+  // Gráfico evolución proyectada
+  destroyChart('deudaProyeccion');
+  const ctx = document.getElementById('chart-deuda-proyeccion');
+  if (ctx && lista.length > 0) {
+    const mesesMax = Math.min(120, Math.max(...lista.map(d => {
+      const c = calcularCuotaMensual(d.saldo, d.tasa, d.cuotasRestantes);
+      return mesesHastaTerminar(d.saldo, d.tasa, c);
+    }).filter(m => m < 999)));
+
+    const labels = [];
+    const valores = [];
+    for (let m = 0; m <= mesesMax; m += 3) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + m);
+      labels.push(d.toLocaleDateString('es-CO',{year:'numeric',month:'short'}));
+      let totalRestante = 0;
+      lista.forEach(deuda => {
+        const c = calcularCuotaMensual(deuda.saldo, deuda.tasa, deuda.cuotasRestantes);
+        const r = deuda.tasa / 100 / 12;
+        if (r > 0) {
+          const s = deuda.saldo * Math.pow(1+r,m) - c * (Math.pow(1+r,m)-1)/r;
+          totalRestante += Math.max(0, s);
+        } else {
+          totalRestante += Math.max(0, deuda.saldo - c * m);
+        }
+      });
+      valores.push(Math.round(totalRestante));
+    }
+
+    charts.deudaProyeccion = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Deuda total',
+          data: valores,
+          borderColor: 'var(--accent3)',
+          backgroundColor: 'rgba(247,114,79,0.08)',
+          fill: true, tension: 0.4, pointRadius: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { labels: { color:'#8a92a8', font:{size:11} } } },
+        scales: {
+          x: { ticks: { color:'#5a6278', maxTicksLimit:8 }, grid: { color:'#1e2433' } },
+          y: { ticks: { color:'#5a6278', callback: v => '$'+cop(v) }, grid: { color:'#1e2433' } }
+        }
+      }
+    });
+  }
+}
+
+// ===== CUENTAS POR PAGAR =====
+let pagosFiltro = 'todos';
+
+const CAT_PAGOS_COLORS = {
+  'Administración':'#4f8ef7','Servicios públicos':'#f0c040',
+  'Internet/Telefonía':'#a78bfa','Nómina':'#38c98b',
+  'Arriendo':'#f7724f','Salud':'#34d399','Educación':'#a78bfa',
+  'Impuestos':'#e05252','Seguro':'#22d3ee','Otro':'#8a92a8'
+};
+
+function guardarPago() {
+  const desc = document.getElementById('pago-desc').value.trim();
+  const cat  = document.getElementById('pago-cat').value;
+  const monto = Number(document.getElementById('pago-monto').value)||0;
+  const fecha = document.getElementById('pago-fecha').value;
+  const recurrencia = document.getElementById('pago-recurrencia').value;
+  const notas = document.getElementById('pago-notas').value.trim();
+  const editId = document.getElementById('pago-edit-id').value;
+  if (!desc||!fecha) { toast('Completa descripción y fecha','error'); return; }
+
+  if (!state.pagosPendientes) state.pagosPendientes = [];
+
+  if (editId) {
+    const p = state.pagosPendientes.find(x=>x.id==editId);
+    if (p) Object.assign(p, {descripcion:desc,categoria:cat,monto,fechaLimite:fecha,recurrencia,notas,estado:p.estado});
+  } else {
+    state.pagosPendientes.push({
+      id:uid(), descripcion:desc, categoria:cat, monto, fechaLimite:fecha,
+      recurrencia, notas, estado:'pendiente', fechaCreacion:new Date().toISOString().slice(0,10)
+    });
+  }
+  closeModal('modal-pago');
+  document.getElementById('pago-edit-id').value='';
+  document.getElementById('modal-pago-title').textContent='Nueva cuenta por pagar';
+  saveAndRefresh(); renderPagos(); toast('Cuenta por pagar guardada');
+}
+
+function editarPago(id) {
+  if (!state.pagosPendientes) return;
+  const p = state.pagosPendientes.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('modal-pago-title').textContent='Editar cuenta por pagar';
+  document.getElementById('pago-edit-id').value=id;
+  document.getElementById('pago-desc').value=p.descripcion;
+  document.getElementById('pago-cat').value=p.categoria||'Otro';
+  document.getElementById('pago-monto').value=p.monto||0;
+  document.getElementById('pago-fecha').value=p.fechaLimite||'';
+  document.getElementById('pago-recurrencia').value=p.recurrencia||'unico';
+  document.getElementById('pago-notas').value=p.notas||'';
+  openModal('modal-pago');
+}
+
+function marcarPagado(id) {
+  if (!state.pagosPendientes) return;
+  const p = state.pagosPendientes.find(x=>x.id===id);
+  if (!p) return;
+  p.estado = p.estado==='pagado' ? 'pendiente' : 'pagado';
+  p.fechaPago = p.estado==='pagado' ? new Date().toISOString().slice(0,10) : null;
+
+  // Si es mensual y se marcó como pagado, crear el próximo mes automáticamente
+  if (p.estado==='pagado' && p.recurrencia==='mensual') {
+    const proxFecha = new Date(p.fechaLimite+'T00:00:00');
+    proxFecha.setMonth(proxFecha.getMonth()+1);
+    const yaExiste = state.pagosPendientes.find(x=>
+      x.descripcion===p.descripcion && x.estado==='pendiente'
+    );
+    if (!yaExiste) {
+      state.pagosPendientes.push({
+        id:uid(), descripcion:p.descripcion, categoria:p.categoria,
+        monto:p.monto, fechaLimite:proxFecha.toISOString().slice(0,10),
+        recurrencia:p.recurrencia, notas:p.notas, estado:'pendiente',
+        fechaCreacion:new Date().toISOString().slice(0,10)
+      });
+      toast('✅ Pagado — próximo mes creado automáticamente');
+    }
+  }
+  saveAndRefresh(); renderPagos();
+  if (p.estado==='pagado') toast('✅ Marcado como pagado');
+}
+
+function borrarPago(id) {
+  if (!state.pagosPendientes) return;
+  state.pagosPendientes = state.pagosPendientes.filter(x=>x.id!==id);
+  saveAndRefresh(); renderPagos(); toast('Eliminado');
+}
+
+function filtrarPagos(f) {
+  pagosFiltro = f;
+  document.querySelectorAll('#pagos-filtros .btn').forEach(b=>{
+    b.className = b.getAttribute('onclick').includes(`'${f}'`)
+      ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+  });
+  renderPagos();
+}
+
+function estadoPago(p) {
+  if (p.estado==='pagado') return 'pagado';
+  const dias = diasHasta(p.fechaLimite);
+  if (dias===null) return 'pendiente';
+  if (dias < 0) return 'vencido';
+  return 'pendiente';
+}
+
+function renderPagos() {
+  if (!state.pagosPendientes) state.pagosPendientes = [];
+  const pagos = state.pagosPendientes;
+
+  // Resumen
+  const vencidos  = pagos.filter(p=>estadoPago(p)==='vencido');
+  const proximos  = pagos.filter(p=>estadoPago(p)==='pendiente' && diasHasta(p.fechaLimite)<=7);
+  const pendientes= pagos.filter(p=>estadoPago(p)==='pendiente');
+  const pagados   = pagos.filter(p=>estadoPago(p)==='pagado');
+  const totalPend = pendientes.reduce((s,p)=>s+(p.monto||0),0);
+
+  const resDiv = document.getElementById('pagos-resumen');
+  if (resDiv) resDiv.innerHTML = `
+    <div class="card red"><div class="card-label">Vencidos</div>
+      <div class="card-value negative">${vencidos.length}</div>
+      <div class="card-sub">${cop(vencidos.reduce((s,p)=>s+(p.monto||0),0))} COP</div></div>
+    <div class="card yellow"><div class="card-label">Vencen en 7 días</div>
+      <div class="card-value" style="color:var(--accent4)">${proximos.length}</div>
+      <div class="card-sub">${cop(proximos.reduce((s,p)=>s+(p.monto||0),0))} COP</div></div>
+    <div class="card blue"><div class="card-label">Total por pagar</div>
+      <div class="card-value">${cop(totalPend)}</div>
+      <div class="card-sub">${pendientes.length} compromisos</div></div>
+    <div class="card green"><div class="card-label">Pagados este mes</div>
+      <div class="card-value positive">${pagados.filter(p=>p.fechaPago&&p.fechaPago.startsWith(mesActual())).length}</div>
+      <div class="card-sub">este mes</div></div>
+  `;
+
+  // Tabla
+  const tb = document.getElementById('tbody-pagos');
+  if (!tb) return;
+
+  let lista = [...pagos].sort((a,b)=>{
+    const ea=estadoPago(a), eb=estadoPago(b);
+    const orden = {vencido:0,pendiente:1,pagado:2};
+    if (orden[ea]!==orden[eb]) return orden[ea]-orden[eb];
+    return (a.fechaLimite||'').localeCompare(b.fechaLimite||'');
+  });
+
+  if (pagosFiltro!=='todos') lista = lista.filter(p=>estadoPago(p)===pagosFiltro);
+
+  if (!lista.length) {
+    tb.innerHTML='<tr><td colspan="7" class="empty-state"><div class="icon">🔔</div>Sin compromisos registrados</td></tr>';
+    return;
+  }
+
+  tb.innerHTML = lista.map(p=>{
+    const est = estadoPago(p);
+    const dias = diasHasta(p.fechaLimite);
+    const badgeEst = est==='vencido'
+      ? `<span class="badge badge-red">🔴 Vencido</span>`
+      : est==='pagado'
+      ? `<span class="badge badge-green">✅ Pagado</span>`
+      : dias<=3
+      ? `<span class="badge badge-red">⚡ Urgente</span>`
+      : dias<=7
+      ? `<span class="badge badge-yellow">⏰ Próximo</span>`
+      : `<span class="badge badge-blue">⏳ Pendiente</span>`;
+    const diasText = est==='pagado' ? `<span style="color:var(--text3)">—</span>`
+      : dias<0 ? `<span style="color:var(--danger);font-weight:500">${Math.abs(dias)}d atrás</span>`
+      : `<span style="color:${dias<=7?'var(--warning)':'var(--text2)'}">${dias}d</span>`;
+    const catColor = CAT_PAGOS_COLORS[p.categoria]||'#8a92a8';
+    return `<tr style="${est==='pagado'?'opacity:0.5':''}${est==='vencido'?'background:rgba(224,82,82,0.05)':''}">
+      <td class="name-col">
+        ${p.descripcion}
+        ${p.notas?`<div style="font-size:11px;color:var(--text3);font-family:'DM Sans',sans-serif;margin-top:2px">${p.notas}</div>`:''}
+      </td>
+      <td><span class="badge" style="background:${catColor}22;color:${catColor}">${p.categoria}</span></td>
+      <td style="font-family:'DM Mono',monospace">${p.monto?cop(p.monto):'—'}</td>
+      <td>${p.fechaLimite||'—'}</td>
+      <td>${diasText}</td>
+      <td>${badgeEst}</td>
+      <td class="action-col">
+        <button class="btn btn-sm" style="border:1px solid ${est==='pagado'?'var(--border)':'var(--accent2)'};color:${est==='pagado'?'var(--text3)':'var(--accent2)'};background:transparent;padding:4px 8px;font-size:11px"
+          onclick="marcarPagado(${p.id})">${est==='pagado'?'↩ Deshacer':'✓ Pagar'}</button>
+        <button class="btn btn-edit" onclick="editarPago(${p.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarPago(${p.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
 function renderAll() {
   renderTablaIngresos();
   renderGastos();
@@ -1964,6 +2858,7 @@ function renderAll() {
   renderCuentas();
   renderDashboard();
   renderCierres();
+  renderPagos();
 }
 
 // ===== DATOS INICIALES =====
@@ -2008,6 +2903,7 @@ const DATOS_INICIALES = {
   cuentas: { nequi:0, nequiNegocios:0, daviplata:0, bancolombia:0, davivienda:0, paypal:0 },
   presupuesto: { "Alimentación":0,"Transporte":0,"Salud":0,"Vivienda":0,"Educación":0,"Ocio":0,"Servicios":0,"Ropa":0,"Deudas/Cuotas":0,"Ahorro":0,"Otro":0 },
   cierresMensuales: [],
+  pagosPendientes: [],
   meta: { version:"9.1", creadoEn:"2026-04-16", ultimaActualizacion:"2026-04-16" }
 };
 
