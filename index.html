@@ -407,8 +407,8 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
   </div>
 
   <div class="sidebar-footer">
-    <button onclick="exportarJSON()" title="Descargar backup JSON">⬇ Backup</button>
-    <button onclick="sincronizarDrive()" title="Backup + abrir Drive">☁ Drive</button>
+    <button onclick="guardarEnSheets()" title="Guardar en Google Sheets">☁ Sheets</button>
+    <button onclick="exportarJSON()">⬇ Backup</button>
     <button onclick="document.getElementById('importFile').click()" title="Restaurar desde backup">⬆ Restaurar</button>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarJSON(event)">
   </div>
@@ -861,6 +861,85 @@ const CAT_COLORS = {
   'Freelance': '#fb7185',
 };
 
+// ===== GOOGLE SHEETS SYNC =====
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynOe-PRhx4sBTqtiORb706mMyf1nuHFMmWDLv8l13IKs3sA3iz1bNC5r7YsNwLxeo/exec';
+let syncTimer2 = null;
+let syncEnCurso = false;
+
+function setSyncStatus(s) {
+  const el = document.getElementById('driveStatus');
+  if (!el) return;
+  const m = {
+    ok:       { t:'🟢 Sheets', c:'var(--accent2)' },
+    syncing:  { t:'🔄 Guardando…', c:'var(--accent4)' },
+    error:    { t:'🔴 Error', c:'var(--danger)' },
+    offline:  { t:'☁ Local', c:'var(--text3)' },
+    cargando: { t:'⬇ Cargando…', c:'var(--accent)' },
+  };
+  const v = m[s]||m.offline;
+  el.textContent=v.t; el.style.color=v.c; el.style.borderColor=v.c;
+}
+
+async function guardarEnSheets() {
+  if (syncEnCurso) return;
+  syncEnCurso = true;
+  setSyncStatus('syncing');
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    if (!state.meta) state.meta = {};
+    state.meta.ultimaActualizacion = new Date().toISOString();
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'guardar', state }),
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      setSyncStatus('ok');
+      const t = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+      const el = document.getElementById('lastSaved');
+      if (el) el.textContent = `☁ ${t}`;
+    } else throw new Error(result.error);
+  } catch(e) {
+    console.error('Sheets error:', e);
+    setSyncStatus('error');
+  } finally { syncEnCurso = false; }
+}
+
+async function cargarDesdeSheets() {
+  setSyncStatus('cargando');
+  try {
+    const resp = await fetch(SCRIPT_URL + '?action=cargar');
+    const result = await resp.json();
+    if (result.ok && result.state) {
+      state = { ...state, ...result.state };
+      if (!state.presupuesto) state.presupuesto = {};
+      if (!state.patrimonio) state.patrimonio = { acciones:[], fondos:[] };
+      if (!state.tarjetas) state.tarjetas = [];
+      if (!state.cierresMensuales) state.cierresMensuales = [];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
+      setSyncStatus('ok');
+      toast('✅ Datos cargados desde Google Sheets');
+      return true;
+    } else throw new Error('Sin datos');
+  } catch(e) {
+    console.error('Sheets load error:', e);
+    setSyncStatus('offline');
+    toast('📱 Usando datos locales','error');
+    return false;
+  }
+}
+
+function scheduleSync() {
+  clearTimeout(syncTimer2);
+  syncTimer2 = setTimeout(() => guardarEnSheets(), 2000);
+}
+
+function sincronizarDrive() {
+  guardarEnSheets();
+  toast('Guardando en Google Sheets…');
+}
+
 let state = {
   ingresos: [], gastos: [], deudas: [], tarjetas: [],
   nominaKonrad: [],
@@ -891,8 +970,10 @@ function cargarEstado() {
 
 function guardarEstado() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  scheduleSync();
   const now = new Date();
-  document.getElementById('lastSaved').textContent = `Guardado ${now.toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'})}`;
+  const el = document.getElementById('lastSaved');
+  if (el) el.textContent = `Local ${now.toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'})}`;
 }
 
 function saveAndRefresh() {
@@ -1922,7 +2003,12 @@ if (!state.cierresMensuales) state.cierresMensuales = [];
 if (!state.meta) state.meta = { version:'9.1' };
 
 renderAll();
-setDriveStatus('offline');
+setSyncStatus('cargando');
+
+// Intenta cargar desde Sheets al iniciar — si falla usa localStorage
+cargarDesdeSheets().catch(() => {
+  setSyncStatus('offline');
+});
 
 const today = new Date().toISOString().slice(0,10);
 ['ing-fecha','gas-fecha'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
