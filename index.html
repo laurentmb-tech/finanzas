@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mi App Financiera v9.1 — Drive Sync</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --bg2: #181c27;
+  --bg3: #1e2433;
+  --card: #1a1f2e;
+  --border: #2a3045;
+  --accent: #4f8ef7;
+  --accent2: #38c98b;
+  --accent3: #f7724f;
+  --accent4: #f0c040;
+  --text: #e8ecf4;
+  --text2: #8a92a8;
+  --text3: #5a6278;
+  --danger: #e05252;
+  --success: #38c98b;
+  --warning: #f0c040;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  font-size: 14px;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform 0.3s;
+}
+.sidebar-logo {
+  padding: 24px 20px 16px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.3px;
+}
+.sidebar-logo span { color: var(--text2); font-weight: 300; font-size: 11px; display: block; margin-top: 2px; }
+.nav-group { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.nav-label { font-size: 10px; font-weight: 600; color: var(--text3); padding: 0 16px 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+.nav-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 16px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text2); font-family: inherit; font-size: 13.5px;
+  border-radius: 0; transition: all 0.15s; text-align: left;
+}
+.nav-btn:hover { color: var(--text); background: var(--bg3); }
+.nav-btn.active { color: var(--accent); background: rgba(79,142,247,0.1); border-left: 2px solid var(--accent); }
+.nav-btn .icon { width: 16px; text-align: center; font-size: 14px; }
+.sidebar-footer { margin-top: auto; padding: 16px; display: flex; gap: 8px; }
+.sidebar-footer button {
+  flex: 1; padding: 7px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--text2); font-family: inherit; font-size: 12px;
+  cursor: pointer; transition: all 0.15s;
+}
+.sidebar-footer button:hover { color: var(--text); border-color: var(--accent); }
+
+/* MAIN */
+.main {
+  margin-left: 220px;
+  flex: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+.topbar-actions { display: flex; gap: 8px; }
+.hamburger { display: none; background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; }
+
+.content { padding: 24px 28px; flex: 1; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* CARDS */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+}
+.card.blue::before { background: var(--accent); }
+.card.green::before { background: var(--accent2); }
+.card.red::before { background: var(--accent3); }
+.card.yellow::before { background: var(--accent4); }
+.card-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+.card-value { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; letter-spacing: -0.5px; }
+.card-value.positive { color: var(--accent2); }
+.card-value.negative { color: var(--accent3); }
+.card-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* CHARTS */
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px; margin-bottom: 24px;
+}
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.chart-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 16px; }
+
+/* FORMS */
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.form-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group select, .form-group textarea {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit; font-size: 13px;
+  padding: 8px 10px;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--accent);
+}
+.form-group select option { background: var(--bg2); }
+.form-actions { margin-top: 14px; display: flex; gap: 8px; }
+
+/* BUTTONS */
+.btn {
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500;
+  transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #6fa0f9; }
+.btn-success { background: var(--accent2); color: #0f1117; }
+.btn-success:hover { background: #4dd9a0; }
+.btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 4px 10px; font-size: 12px; }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-edit { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 4px 10px; font-size: 12px; }
+.btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; border-radius: var(--radius); }
+table {
+  width: 100%; border-collapse: collapse;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+th {
+  background: var(--bg3);
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px; color: var(--text3); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px; color: var(--text2);
+  font-family: 'DM Mono', monospace;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+td.name-col { font-family: 'DM Sans', sans-serif; color: var(--text); }
+td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; align-items: center; }
+
+/* BADGES */
+.badge {
+  display: inline-block; padding: 2px 8px;
+  border-radius: 20px; font-size: 11px; font-weight: 500;
+}
+.badge-green { background: rgba(56,201,139,0.15); color: var(--accent2); }
+.badge-red { background: rgba(224,82,82,0.15); color: var(--danger); }
+.badge-blue { background: rgba(79,142,247,0.15); color: var(--accent); }
+.badge-yellow { background: rgba(240,192,64,0.15); color: var(--accent4); }
+
+/* PRESUPUESTO */
+.budget-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.budget-item:last-child { border-bottom: none; }
+.budget-cat { width: 140px; font-size: 13px; color: var(--text); }
+.budget-bar-wrap { flex: 1; background: var(--bg3); border-radius: 20px; height: 6px; overflow: hidden; }
+.budget-bar { height: 100%; border-radius: 20px; transition: width 0.5s; }
+.budget-nums { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text2); width: 160px; text-align: right; }
+
+/* SALDO CUENTAS */
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px; margin-bottom: 20px;
+}
+.account-chip {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.account-chip .acc-name { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.account-chip .acc-val { font-family: 'DM Mono', monospace; font-size: 15px; color: var(--text); font-weight: 500; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); z-index: 200;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px; width: 90%; max-width: 520px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow);
+}
+.modal h3 { font-size: 15px; margin-bottom: 16px; color: var(--text); }
+.modal-actions { margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end; }
+
+/* TABS */
+.tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--bg3); padding: 4px; border-radius: var(--radius-sm); width: fit-content; }
+.tab-btn { padding: 6px 14px; border-radius: 6px; border: none; background: none; color: var(--text2); font-family: inherit; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.tab-btn.active { background: var(--bg2); color: var(--text); }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 18px;
+  font-size: 13px; color: var(--text);
+  box-shadow: var(--shadow); z-index: 999;
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.3s;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 3px solid var(--accent2); }
+.toast.error { border-left: 3px solid var(--danger); }
+
+/* PROGRESS */
+.net-worth-bar {
+  background: var(--bg3); border-radius: 20px; height: 8px;
+  overflow: hidden; margin-top: 8px;
+}
+.net-worth-fill { height: 100%; border-radius: 20px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.5s; }
+
+/* SECTION HEADERS */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-header h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .hamburger { display: block; }
+  .charts-row { grid-template-columns: 1fr; }
+  .content { padding: 16px; }
+  .topbar { padding: 12px 16px; }
+}
+
+/* OVERLAY MOBILE */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 99;
+}
+.sidebar-overlay.open { display: block; }
+
+/* CAT COLORS */
+.cat-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+}
+
+/* EMPTY STATE */
+.empty-state {
+  padding: 40px; text-align: center; color: var(--text3); font-size: 13px;
+}
+.empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+/* PATRIMONIO NET */
+.patrimonio-summary {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px; margin-bottom: 20px;
+}
+
+/* TARJETA CARD */
+.credit-cards-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px; margin-bottom: 24px;
+}
+.credit-card-visual {
+  background: linear-gradient(135deg, var(--bg3) 0%, var(--bg2) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px;
+  position: relative; overflow: hidden;
+  cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+}
+.credit-card-visual:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+.credit-card-visual::after {
+  content: '';
+  position: absolute; top: -40px; right: -40px;
+  width: 120px; height: 120px;
+  border-radius: 50%; opacity: 0.06;
+  background: var(--accent);
+}
+.cc-bank { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
+.cc-digits { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--text2); letter-spacing: 2px; margin-bottom: 14px; }
+.cc-cupo-bar { background: rgba(255,255,255,0.08); border-radius: 20px; height: 4px; margin-bottom: 6px; overflow: hidden; }
+.cc-cupo-fill { height: 100%; border-radius: 20px; background: var(--accent); transition: width 0.5s; }
+.cc-amounts { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+.cc-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+.cc-dias { font-size: 11px; }
+.cc-dias span { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; display: block; }
+.cc-pago { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    💰 FinanzasV9
+  <span>v9.1 · Drive Sync</span>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Principal</div>
+    <button class="nav-btn active" onclick="showSection('dashboard')"><span class="icon">📊</span> Dashboard</button>
+    <button class="nav-btn" onclick="showSection('ingresos')"><span class="icon">📥</span> Ingresos</button>
+    <button class="nav-btn" onclick="showSection('gastos')"><span class="icon">📤</span> Gastos</button>
+    <button class="nav-btn" onclick="showSection('presupuesto')"><span class="icon">🎯</span> Presupuesto</button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Finanzas</div>
+    <button class="nav-btn" onclick="showSection('tarjetas')"><span class="icon">💳</span> Tarjetas</button>
+    <button class="nav-btn" onclick="showSection('deudas')"><span class="icon">📋</span> Deudas</button>
+    <button class="nav-btn" onclick="showSection('patrimonio')"><span class="icon">📈</span> Patrimonio</button>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-label">Nómina</div>
+    <button class="nav-btn" onclick="showSection('konrad')"><span class="icon">🏫</span> Konrad</button>
+    <button class="nav-btn" onclick="showSection('cuentas')"><span class="icon">🏦</span> Cuentas</button>
+    <button class="nav-btn" onclick="showSection('cierres')"><span class="icon">📸</span> Cierres</button>
+  </div>
+
+  <div class="sidebar-footer">
+    <button onclick="sincronizarDrive()" id="btn-sync" title="Guardar en Google Drive">☁ Drive</button>
+    <button onclick="exportarJSON()">⬇ Local</button>
+    <button onclick="document.getElementById('importFile').click()">⬆ Import</button>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarJSON(event)">
+  </div>
+</nav>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <h1 id="pageTitle">Dashboard</h1>
+    </div>
+    <div class="topbar-actions">
+      <span style="font-size:12px;color:var(--text3)" id="lastSaved"></span>
+      <span style="font-size:11px;padding:3px 8px;border-radius:20px;background:var(--bg3);border:1px solid var(--border)" id="driveStatus">⚪ Drive</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <section id="sec-dashboard" class="section active">
+      <div class="cards-grid" id="dashCards"></div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Ingresos vs Gastos — últimos 6 meses</div>
+          <canvas id="chart-ing-gas" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Gastos por categoría</div>
+          <canvas id="chart-pie" height="200"></canvas>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Evolución patrimonial</div>
+          <canvas id="chart-patrimonio" height="160"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Saldos por cuenta</div>
+          <canvas id="chart-cuentas" height="160"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- INGRESOS -->
+    <section id="sec-ingresos" class="section">
+      <div class="section-header">
+        <h2>Ingresos</h2>
+        <button class="btn btn-success" onclick="openModal('modal-ingreso')">+ Agregar ingreso</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Descripción</th><th>Categoría</th>
+            <th>Monto</th><th>Cuenta</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbody-ingresos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- GASTOS -->
+    <section id="sec-gastos" class="section">
+      <div class="section-header">
+        <h2>Gastos</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-gasto')">+ Agregar gasto</button>
+      </div>
+      <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap" id="cat-filters"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Descripción</th><th>Categoría</th>
+            <th>Monto</th><th>Cuenta</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbody-gastos"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PRESUPUESTO -->
+    <section id="sec-presupuesto" class="section">
+      <div class="section-header">
+        <h2>Presupuesto mensual</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-presupuesto')">⚙ Configurar</button>
+      </div>
+      <div class="form-card" id="presupuesto-container"></div>
+    </section>
+
+    <!-- TARJETAS -->
+    <section id="sec-tarjetas" class="section">
+      <div class="section-header">
+        <h2>Tarjetas de crédito</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-tarjeta')">+ Agregar tarjeta</button>
+      </div>
+      <div class="credit-cards-grid" id="cards-visual"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Tarjeta</th><th>Últimos dígitos</th><th>Cupo</th><th>Saldo</th>
+            <th>Disponible</th><th>Pago mín.</th><th>Pago total</th>
+            <th>Fecha pago</th><th>Días</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbody-tarjetas"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- DEUDAS -->
+    <section id="sec-deudas" class="section">
+      <div class="section-header">
+        <h2>Deudas</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-deuda')">+ Agregar deuda</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Descripción</th><th>Monto</th><th>Tasa %</th>
+            <th>Cuotas pagadas</th><th>Cuotas restantes</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbody-deudas"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PATRIMONIO -->
+    <section id="sec-patrimonio" class="section">
+      <div class="section-header"><h2>Patrimonio neto</h2></div>
+      <div class="cards-grid" id="patrimonio-cards"></div>
+
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab-btn active" onclick="switchTab('acciones')">Acciones</button>
+        <button class="tab-btn" onclick="switchTab('fondos')">Fondos / Ahorros LP</button>
+      </div>
+
+      <div id="tab-acciones">
+        <div class="section-header" style="margin-bottom:12px">
+          <span style="font-size:13px;color:var(--text2)">Portafolio de acciones</span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-accion')">+ Agregar acción</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Ticker</th><th>Nombre</th><th>Cantidad</th><th>P. Compra</th>
+              <th>P. Actual</th><th>Inversión</th><th>Valor actual</th>
+              <th>Dividendos</th><th>G/P</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-acciones"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-fondos" style="display:none">
+        <div class="section-header" style="margin-bottom:12px">
+          <span style="font-size:13px;color:var(--text2)">Fondos y ahorros de largo plazo</span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-fondo')">+ Agregar fondo</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Nombre</th><th>Tipo</th><th>Saldo</th><th>Tasa %</th><th>Notas</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-fondos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- KONRAD -->
+    <section id="sec-konrad" class="section">
+      <div class="section-header">
+        <h2>Nómina Konrad</h2>
+        <button class="btn btn-primary" onclick="openModal('modal-konrad')">+ Registrar nómina</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Periodo</th><th>Sueldo básico</th><th>Total pagos</th>
+            <th>Total deducciones</th><th>Neto a pagar</th>
+          </tr></thead>
+          <tbody id="tbody-konrad"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- CUENTAS -->
+    <section id="sec-cuentas" class="section">
+      <div class="section-header"><h2>Saldos por cuenta</h2></div>
+      <div class="form-card">
+        <div class="form-grid" id="cuentas-form-grid"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="guardarCuentas()">Actualizar saldos</button>
+        </div>
+      </div>
+      <div class="accounts-grid" id="accounts-display"></div>
+    </section>
+
+    <!-- CIERRES MENSUALES -->
+    <section id="sec-cierres" class="section">
+      <div class="section-header">
+        <h2>📸 Fotografía financiera</h2>
+        <button class="btn btn-primary" onclick="ejecutarCierreMensual()">📸 Cerrar mes actual</button>
+      </div>
+      <div class="form-card" style="margin-bottom:20px">
+        <p style="font-size:13px;color:var(--text2);line-height:1.8">
+          Cada cierre guarda una <strong style="color:var(--text)">instantánea completa</strong> de tu situación financiera: ingresos, gastos, activos, deudas y patrimonio neto del mes.<br>
+          Así construyes un historial real que te permite ver tu evolución mes a mes, año a año.<br>
+          <span style="color:var(--accent4)">💡 Recomendación:</span> ejecuta el cierre el <strong style="color:var(--text)">último día de cada mes</strong>, después de actualizar todos tus saldos y registrar todos los movimientos.
+        </p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Mes</th><th>Ingresos</th><th>Gastos</th>
+            <th>Flujo neto</th><th>Activos totales</th><th>Patrimonio neto</th>
+          </tr></thead>
+          <tbody id="tbody-cierres"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Modal Ingreso -->
+<div class="modal-overlay" id="modal-ingreso">
+  <div class="modal">
+    <h3 id="modal-ingreso-title">Nuevo ingreso</h3>
+    <input type="hidden" id="ing-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Fecha</label><input type="date" id="ing-fecha"></div>
+      <div class="form-group"><label>Descripción</label><input type="text" id="ing-desc" placeholder="Ej: Consulta privada"></div>
+      <div class="form-group"><label>Monto (COP)</label><input type="number" id="ing-monto"></div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="ing-cat">
+          <option value="Salario">Salario</option>
+          <option value="Consulta privada">Consulta privada</option>
+          <option value="Docencia">Docencia</option>
+          <option value="Inversiones">Inversiones</option>
+          <option value="Freelance">Freelance</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Cuenta</label>
+        <select id="ing-cuenta">
+          <option>Nequi</option><option>Nequi Negocios</option>
+          <option>Daviplata</option><option selected>Bancolombia</option>
+          <option>Davivienda</option><option>PayPal</option><option>Efectivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-ingreso')">Cancelar</button>
+      <button class="btn btn-success" onclick="guardarIngreso()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Gasto -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal">
+    <h3 id="modal-gasto-title">Nuevo gasto</h3>
+    <input type="hidden" id="gas-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Fecha</label><input type="date" id="gas-fecha"></div>
+      <div class="form-group"><label>Descripción</label><input type="text" id="gas-desc" placeholder="Ej: Supermercado"></div>
+      <div class="form-group"><label>Monto (COP)</label><input type="number" id="gas-monto"></div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="gas-cat">
+          <option value="Alimentación">🛒 Alimentación</option>
+          <option value="Transporte">🚗 Transporte</option>
+          <option value="Salud">🏥 Salud</option>
+          <option value="Vivienda">🏠 Vivienda</option>
+          <option value="Educación">📚 Educación</option>
+          <option value="Ocio">🎭 Ocio</option>
+          <option value="Servicios">💡 Servicios</option>
+          <option value="Ropa">👕 Ropa</option>
+          <option value="Deudas/Cuotas">💳 Deudas/Cuotas</option>
+          <option value="Ahorro">💰 Ahorro</option>
+          <option value="Otro">📌 Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Cuenta</label>
+        <select id="gas-cuenta">
+          <option>Nequi</option><option>Nequi Negocios</option>
+          <option>Daviplata</option><option selected>Bancolombia</option>
+          <option>Davivienda</option><option>PayPal</option><option>Efectivo</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Presupuesto -->
+<div class="modal-overlay" id="modal-presupuesto">
+  <div class="modal">
+    <h3>Configurar presupuesto mensual</h3>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">Define cuánto quieres gastar por categoría cada mes.</p>
+    <div id="presupuesto-form-items"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-presupuesto')">Cerrar</button>
+      <button class="btn btn-primary" onclick="guardarPresupuesto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tarjeta -->
+<div class="modal-overlay" id="modal-tarjeta">
+  <div class="modal">
+    <h3 id="modal-tarjeta-title">Nueva tarjeta</h3>
+    <input type="hidden" id="tar-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre / Banco</label><input type="text" id="tar-nombre" placeholder="Bancolombia Mastercard"></div>
+      <div class="form-group"><label>Últimos 4 dígitos</label><input type="text" id="tar-digitos" placeholder="7443"></div>
+      <div class="form-group"><label>Cupo total</label><input type="number" id="tar-cupo"></div>
+      <div class="form-group"><label>Saldo actual</label><input type="number" id="tar-saldo"></div>
+      <div class="form-group"><label>Pago mínimo</label><input type="number" id="tar-minimo"></div>
+      <div class="form-group"><label>Pago total extracto</label><input type="number" id="tar-total-pago"></div>
+      <div class="form-group"><label>Fecha de corte</label><input type="date" id="tar-fecha-corte"></div>
+      <div class="form-group"><label>Fecha límite pago</label><input type="date" id="tar-fecha-pago"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-tarjeta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarTarjeta()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Deuda -->
+<div class="modal-overlay" id="modal-deuda">
+  <div class="modal">
+    <h3 id="modal-deuda-title">Nueva deuda</h3>
+    <input type="hidden" id="deu-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Descripción</label><input type="text" id="deu-desc"></div>
+      <div class="form-group"><label>Monto</label><input type="number" id="deu-monto"></div>
+      <div class="form-group"><label>Tasa % anual</label><input type="number" id="deu-tasa" step="0.01"></div>
+      <div class="form-group"><label>Cuotas totales</label><input type="number" id="deu-cuotas-totales"></div>
+      <div class="form-group"><label>Cuotas pagadas</label><input type="number" id="deu-cuotas-pagadas" value="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-deuda')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarDeuda()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Acción -->
+<div class="modal-overlay" id="modal-accion">
+  <div class="modal">
+    <h3 id="modal-accion-title">Nueva acción</h3>
+    <input type="hidden" id="acc-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Ticker / Símbolo</label><input type="text" id="acc-simbolo" placeholder="GRUPOSURA"></div>
+      <div class="form-group"><label>Nombre empresa</label><input type="text" id="acc-nombre"></div>
+      <div class="form-group"><label>Cantidad de títulos</label><input type="number" id="acc-cantidad" step="1"></div>
+      <div class="form-group"><label>Precio compra por título</label><input type="number" id="acc-precio-compra" step="0.01"></div>
+      <div class="form-group"><label>Precio actual por título</label><input type="number" id="acc-precio-actual" step="0.01"></div>
+      <div class="form-group"><label>Dividendos acumulados</label><input type="number" id="acc-dividendos" step="0.01" value="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-accion')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAccion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Fondo -->
+<div class="modal-overlay" id="modal-fondo">
+  <div class="modal">
+    <h3 id="modal-fondo-title">Nuevo fondo</h3>
+    <input type="hidden" id="fon-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre</label><input type="text" id="fon-nombre"></div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="fon-tipo">
+          <option>Fondo empleados</option><option>Fiducia</option>
+          <option>Ahorro programado</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Saldo actual</label><input type="number" id="fon-saldo"></div>
+      <div class="form-group"><label>Tasa % anual</label><input type="number" id="fon-tasa" step="0.01"></div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notas</label><textarea id="fon-notas" rows="2"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-fondo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarFondo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Konrad -->
+<div class="modal-overlay" id="modal-konrad">
+  <div class="modal">
+    <h3>Registrar nómina Konrad</h3>
+    <div class="form-grid">
+      <div class="form-group"><label>Periodo</label><input type="month" id="konrad-periodo"></div>
+      <div class="form-group"><label>Sueldo básico</label><input type="number" id="konrad-sueldo"></div>
+      <div class="form-group"><label>Recargo nocturno</label><input type="number" id="konrad-recargo" value="0"></div>
+    </div>
+    <p style="font-size:12px;color:var(--text3);margin:12px 0 8px">Deducciones</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Fondo solidaridad</label><input type="number" id="konrad-fondo-solidaridad" value="0"></div>
+      <div class="form-group"><label>Fondo subsistencia</label><input type="number" id="konrad-fondo-subsistencia" value="0"></div>
+      <div class="form-group"><label>Pensión empleado</label><input type="number" id="konrad-pension" value="0"></div>
+      <div class="form-group"><label>Salud empleado</label><input type="number" id="konrad-salud" value="0"></div>
+      <div class="form-group"><label>Fondo empleados – ahorro</label><input type="number" id="konrad-fondo-ahorro" value="0"></div>
+      <div class="form-group"><label>Fondo empleados – préstamo</label><input type="number" id="konrad-fondo-prestamo" value="0"></div>
+      <div class="form-group"><label>Medicina prepagada</label><input type="number" id="konrad-prepaga" value="0"></div>
+      <div class="form-group"><label>Retención en la fuente</label><input type="number" id="konrad-retencion" value="0"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-konrad')">Cancelar</button>
+      <button class="btn btn-primary" onclick="registrarKonrad()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== STATE =====
+const STORAGE_KEY = 'finanzasV91';
+const FINNHUB_API_KEY = 'd7g3dg1r01qqb8ri6t8gd7g3dg1r01qqb8ri6t90';
+
+const CAT_COLORS = {
+  'Alimentación': '#f7724f',
+  'Transporte': '#4f8ef7',
+  'Salud': '#38c98b',
+  'Vivienda': '#f0c040',
+  'Educación': '#a78bfa',
+  'Ocio': '#fb7185',
+  'Servicios': '#34d399',
+  'Ropa': '#f472b6',
+  'Deudas/Cuotas': '#ef4444',
+  'Ahorro': '#22d3ee',
+  'Otro': '#8a92a8',
+  'Salario': '#4f8ef7',
+  'Consulta privada': '#38c98b',
+  'Docencia': '#a78bfa',
+  'Inversiones': '#f0c040',
+  'Freelance': '#fb7185',
+};
+
+let state = {
+  ingresos: [], gastos: [], deudas: [], tarjetas: [],
+  nominaKonrad: [],
+  cuentas: { nequi:0, nequiNegocios:0, daviplata:0, bancolombia:0, davivienda:0, paypal:0 },
+  patrimonio: { acciones: [], fondos: [] },
+  presupuesto: {
+    'Alimentación': 0, 'Transporte': 0, 'Salud': 0, 'Vivienda': 0,
+    'Educación': 0, 'Ocio': 0, 'Servicios': 0, 'Ropa': 0,
+    'Deudas/Cuotas': 0, 'Ahorro': 0, 'Otro': 0
+  }
+};
+
+let gastosFiltro = 'Todos';
+let charts = {};
+
+function cargarEstado() {
+  const data = localStorage.getItem(STORAGE_KEY);
+  if (data) {
+    try {
+      const parsed = JSON.parse(data);
+      state = { ...state, ...parsed };
+      if (!state.presupuesto) state.presupuesto = {};
+      if (!state.patrimonio) state.patrimonio = { acciones: [], fondos: [] };
+      if (!state.tarjetas) state.tarjetas = [];
+    } catch(e) {}
+  }
+}
+
+function guardarEstado() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  const now = new Date();
+  document.getElementById('lastSaved').textContent = `Guardado ${now.toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit'})}`;
+}
+
+function saveAndRefresh() {
+  guardarEstado();
+  renderAll();
+}
+
+// ===== NAVIGATION =====
+const sectionTitles = {
+  dashboard: 'Dashboard', ingresos: 'Ingresos', gastos: 'Gastos',
+  presupuesto: 'Presupuesto', tarjetas: 'Tarjetas de crédito',
+  deudas: 'Deudas', patrimonio: 'Patrimonio', konrad: 'Nómina Konrad',
+  cuentas: 'Cuentas bancarias', cierres: '📸 Fotografía financiera mensual'
+};
+
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.getAttribute('onclick').includes("'" + id + "'")) b.classList.add('active');
+  });
+  document.getElementById('pageTitle').textContent = sectionTitles[id] || id;
+  closeSidebar();
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'gastos') renderGastos();
+  if (id === 'presupuesto') renderPresupuesto();
+  if (id === 'patrimonio') { renderAcciones(); renderFondos(); renderPatrimonioCards(); }
+  if (id === 'tarjetas') renderTarjetas();
+  if (id === 'cierres') renderCierres();
+  if (id === 'cuentas') renderCuentas();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ===== MODAL =====
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ===== TOAST =====
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ===== UTILS =====
+const cop = n => Number(n||0).toLocaleString('es-CO');
+function uid() { return Date.now() + Math.floor(Math.random()*1000); }
+function diasHasta(f) {
+  if (!f) return null;
+  return Math.ceil((new Date(f+'T00:00:00') - new Date()) / 86400000);
+}
+function mesActual() { return new Date().toISOString().slice(0,7); }
+function agruparPorMes(movs) {
+  const m = {};
+  movs.forEach(x => { if (x.fecha) { const k = x.fecha.slice(0,7); m[k]=(m[k]||0)+x.monto; } });
+  return m;
+}
+
+// ===== CUENTA AJUSTE =====
+function ajustarCuenta(cuenta, delta) {
+  const c = state.cuentas;
+  if (cuenta==='Nequi') c.nequi+=delta;
+  else if (cuenta==='Nequi Negocios') c.nequiNegocios+=delta;
+  else if (cuenta==='Daviplata') c.daviplata+=delta;
+  else if (cuenta==='Bancolombia') c.bancolombia+=delta;
+  else if (cuenta==='Davivienda') c.davivienda+=delta;
+  else if (cuenta==='PayPal') c.paypal+=delta;
+}
+
+// ===== INGRESOS =====
+function guardarIngreso() {
+  const fecha = document.getElementById('ing-fecha').value;
+  const desc = document.getElementById('ing-desc').value.trim();
+  const monto = Number(document.getElementById('ing-monto').value)||0;
+  const cat = document.getElementById('ing-cat').value;
+  const cuenta = document.getElementById('ing-cuenta').value;
+  const editId = document.getElementById('ing-edit-id').value;
+  if (!fecha||!desc||!monto) { toast('Completa todos los campos','error'); return; }
+
+  if (editId) {
+    const idx = state.ingresos.findIndex(i=>i.id==editId);
+    if (idx>=0) {
+      ajustarCuenta(state.ingresos[idx].cuenta, -state.ingresos[idx].monto);
+      state.ingresos[idx] = {...state.ingresos[idx], fecha, descripcion:desc, monto, categoria:cat, cuenta};
+      ajustarCuenta(cuenta, monto);
+    }
+  } else {
+    state.ingresos.push({id:uid(), fecha, descripcion:desc, monto, categoria:cat, cuenta});
+    ajustarCuenta(cuenta, monto);
+  }
+  closeModal('modal-ingreso');
+  document.getElementById('ing-edit-id').value='';
+  saveAndRefresh();
+  renderTablaIngresos();
+  toast('Ingreso guardado');
+}
+
+function editarIngreso(id) {
+  const i = state.ingresos.find(x=>x.id===id);
+  if (!i) return;
+  document.getElementById('modal-ingreso-title').textContent = 'Editar ingreso';
+  document.getElementById('ing-edit-id').value = id;
+  document.getElementById('ing-fecha').value = i.fecha;
+  document.getElementById('ing-desc').value = i.descripcion;
+  document.getElementById('ing-monto').value = i.monto;
+  document.getElementById('ing-cat').value = i.categoria||'Otro';
+  document.getElementById('ing-cuenta').value = i.cuenta||'Bancolombia';
+  openModal('modal-ingreso');
+}
+
+function borrarIngreso(id) {
+  const i = state.ingresos.find(x=>x.id===id);
+  if (i) ajustarCuenta(i.cuenta, -i.monto);
+  state.ingresos = state.ingresos.filter(x=>x.id!==id);
+  saveAndRefresh(); renderTablaIngresos(); toast('Ingreso eliminado');
+}
+
+function renderTablaIngresos() {
+  const tb = document.getElementById('tbody-ingresos');
+  if (!tb) return;
+  if (!state.ingresos.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">Sin ingresos registrados</td></tr>'; return; }
+  tb.innerHTML = state.ingresos.slice().reverse().map(i=>`
+    <tr>
+      <td>${i.fecha}</td>
+      <td class="name-col">${i.descripcion}</td>
+      <td><span class="badge badge-green">${i.categoria||'—'}</span></td>
+      <td style="color:var(--accent2)">+${cop(i.monto)}</td>
+      <td>${i.cuenta||'—'}</td>
+      <td class="action-col">
+        <button class="btn btn-edit" onclick="editarIngreso(${i.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarIngreso(${i.id})">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+// ===== GASTOS =====
+function guardarGasto() {
+  const fecha = document.getElementById('gas-fecha').value;
+  const desc = document.getElementById('gas-desc').value.trim();
+  const monto = Number(document.getElementById('gas-monto').value)||0;
+  const cat = document.getElementById('gas-cat').value.replace(/^[^ ]+ /,'');
+  const cuenta = document.getElementById('gas-cuenta').value;
+  const editId = document.getElementById('gas-edit-id').value;
+  if (!fecha||!desc||!monto) { toast('Completa todos los campos','error'); return; }
+
+  if (editId) {
+    const idx = state.gastos.findIndex(g=>g.id==editId);
+    if (idx>=0) {
+      ajustarCuenta(state.gastos[idx].cuenta, state.gastos[idx].monto);
+      state.gastos[idx] = {...state.gastos[idx], fecha, descripcion:desc, monto, categoria:cat, cuenta};
+      ajustarCuenta(cuenta, -monto);
+    }
+  } else {
+    state.gastos.push({id:uid(), fecha, descripcion:desc, monto, categoria:cat, cuenta});
+    ajustarCuenta(cuenta, -monto);
+  }
+  closeModal('modal-gasto');
+  document.getElementById('gas-edit-id').value='';
+  saveAndRefresh(); renderGastos(); toast('Gasto guardado');
+}
+
+function editarGasto(id) {
+  const g = state.gastos.find(x=>x.id===id);
+  if (!g) return;
+  document.getElementById('modal-gasto-title').textContent = 'Editar gasto';
+  document.getElementById('gas-edit-id').value = id;
+  document.getElementById('gas-fecha').value = g.fecha;
+  document.getElementById('gas-desc').value = g.descripcion;
+  document.getElementById('gas-monto').value = g.monto;
+  const sel = document.getElementById('gas-cat');
+  for (let o of sel.options) { if (o.value.includes(g.categoria)) { sel.value=o.value; break; } }
+  document.getElementById('gas-cuenta').value = g.cuenta||'Bancolombia';
+  openModal('modal-gasto');
+}
+
+function borrarGasto(id) {
+  const g = state.gastos.find(x=>x.id===id);
+  if (g) ajustarCuenta(g.cuenta, g.monto);
+  state.gastos = state.gastos.filter(x=>x.id!==id);
+  saveAndRefresh(); renderGastos(); toast('Gasto eliminado');
+}
+
+function renderGastos() {
+  const tb = document.getElementById('tbody-gastos');
+  if (!tb) return;
+  const filtrados = gastosFiltro==='Todos' ? state.gastos : state.gastos.filter(g=>g.categoria===gastosFiltro);
+  renderFiltrosCat();
+  if (!filtrados.length) { tb.innerHTML = '<tr><td colspan="6" class="empty-state">Sin gastos registrados</td></tr>'; return; }
+  tb.innerHTML = filtrados.slice().reverse().map(g=>`
+    <tr>
+      <td>${g.fecha}</td>
+      <td class="name-col">${g.descripcion}</td>
+      <td><span class="badge" style="background:${CAT_COLORS[g.categoria]||'#8a92a8'}22;color:${CAT_COLORS[g.categoria]||'#8a92a8'}">${g.categoria||'—'}</span></td>
+      <td style="color:var(--accent3)">-${cop(g.monto)}</td>
+      <td>${g.cuenta||'—'}</td>
+      <td class="action-col">
+        <button class="btn btn-edit" onclick="editarGasto(${g.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarGasto(${g.id})">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderFiltrosCat() {
+  const div = document.getElementById('cat-filters');
+  if (!div) return;
+  const cats = ['Todos', ...new Set(state.gastos.map(g=>g.categoria).filter(Boolean))];
+  div.innerHTML = cats.map(c=>`
+    <button class="btn ${gastosFiltro===c?'btn-primary':'btn-outline'} btn-sm" onclick="filtrarCat('${c}')">${c}</button>
+  `).join('');
+}
+
+function filtrarCat(cat) { gastosFiltro=cat; renderGastos(); }
+
+// ===== PRESUPUESTO =====
+function openPresupuestoModal() {
+  const container = document.getElementById('presupuesto-form-items');
+  const cats = Object.keys(state.presupuesto);
+  container.innerHTML = `<div class="form-grid">` + cats.map(c=>`
+    <div class="form-group">
+      <label><span class="cat-dot" style="background:${CAT_COLORS[c]||'#8a92a8'}"></span>${c}</label>
+      <input type="number" id="bud-${c.replace('/','_')}" value="${state.presupuesto[c]||0}" placeholder="0">
+    </div>`).join('') + `</div>`;
+  openModal('modal-presupuesto');
+}
+
+function guardarPresupuesto() {
+  Object.keys(state.presupuesto).forEach(c => {
+    const el = document.getElementById('bud-' + c.replace('/','_'));
+    if (el) state.presupuesto[c] = Number(el.value)||0;
+  });
+  closeModal('modal-presupuesto');
+  saveAndRefresh(); renderPresupuesto(); toast('Presupuesto actualizado');
+}
+
+function renderPresupuesto() {
+  const div = document.getElementById('presupuesto-container');
+  if (!div) return;
+  const mesActual_ = mesActual();
+  const gastosMes = {};
+  state.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mesActual_)).forEach(g=>{
+    gastosMes[g.categoria] = (gastosMes[g.categoria]||0)+g.monto;
+  });
+
+  const items = Object.entries(state.presupuesto).map(([cat, bud])=>{
+    const gastado = gastosMes[cat]||0;
+    const pct = bud>0 ? Math.min(gastado/bud*100,100) : 0;
+    const color = pct>=100?'var(--danger)':pct>=80?'var(--warning)':'var(--accent2)';
+    return `<div class="budget-item">
+      <div class="budget-cat"><span class="cat-dot" style="background:${CAT_COLORS[cat]||'#8a92a8'}"></span>${cat}</div>
+      <div class="budget-bar-wrap"><div class="budget-bar" style="width:${pct}%;background:${color}"></div></div>
+      <div class="budget-nums">${cop(gastado)} / ${bud>0?cop(bud):'—'}</div>
+    </div>`;
+  }).join('');
+
+  div.innerHTML = `<h3 style="margin-bottom:16px;font-size:13px;color:var(--text2)">Mes actual: ${mesActual_}</h3>` + items +
+    `<div style="margin-top:14px"><button class="btn btn-outline btn-sm" onclick="openPresupuestoModal()">⚙ Configurar montos</button></div>`;
+}
+
+// ===== TARJETAS =====
+function guardarTarjeta() {
+  const nombre = document.getElementById('tar-nombre').value.trim();
+  const digitos = document.getElementById('tar-digitos').value.trim();
+  const cupo = Number(document.getElementById('tar-cupo').value)||0;
+  const saldo = Number(document.getElementById('tar-saldo').value)||0;
+  const pagoMinimo = Number(document.getElementById('tar-minimo').value)||0;
+  const pagoTotal = Number(document.getElementById('tar-total-pago').value)||0;
+  const fechaCorte = document.getElementById('tar-fecha-corte').value||'';
+  const fechaPago = document.getElementById('tar-fecha-pago').value||'';
+  const editId = document.getElementById('tar-edit-id').value;
+  if (!nombre||!digitos) { toast('Nombre y dígitos requeridos','error'); return; }
+
+  if (editId) {
+    const t = state.tarjetas.find(x=>x.id==editId);
+    if (t) Object.assign(t, {nombre,digitos,cupo,saldo,pagoMinimo,pagoTotal,fechaCorte,fechaPago});
+  } else {
+    state.tarjetas.push({id:uid(),nombre,digitos,cupo,saldo,pagoMinimo,pagoTotal,fechaCorte,fechaPago});
+  }
+  closeModal('modal-tarjeta');
+  document.getElementById('tar-edit-id').value='';
+  saveAndRefresh(); renderTarjetas(); toast('Tarjeta guardada');
+}
+
+function editarTarjeta(id) {
+  const t = state.tarjetas.find(x=>x.id===id);
+  if (!t) return;
+  document.getElementById('modal-tarjeta-title').textContent = 'Editar tarjeta';
+  document.getElementById('tar-edit-id').value = id;
+  document.getElementById('tar-nombre').value = t.nombre;
+  document.getElementById('tar-digitos').value = t.digitos;
+  document.getElementById('tar-cupo').value = t.cupo;
+  document.getElementById('tar-saldo').value = t.saldo;
+  document.getElementById('tar-minimo').value = t.pagoMinimo;
+  document.getElementById('tar-total-pago').value = t.pagoTotal||'';
+  document.getElementById('tar-fecha-corte').value = t.fechaCorte||'';
+  document.getElementById('tar-fecha-pago').value = t.fechaPago||'';
+  openModal('modal-tarjeta');
+}
+
+function borrarTarjeta(id) {
+  state.tarjetas = state.tarjetas.filter(t=>t.id!==id);
+  saveAndRefresh(); renderTarjetas(); toast('Tarjeta eliminada');
+}
+
+function renderTarjetas() {
+  const visual = document.getElementById('cards-visual');
+  const tb = document.getElementById('tbody-tarjetas');
+  if (!visual||!tb) return;
+
+  if (!state.tarjetas.length) {
+    visual.innerHTML = '<div class="empty-state"><div class="icon">💳</div>No hay tarjetas registradas</div>';
+    tb.innerHTML = '';
+    return;
+  }
+
+  visual.innerHTML = state.tarjetas.map(t=>{
+    const pct = t.cupo>0 ? Math.min(t.saldo/t.cupo*100,100) : 0;
+    const dias = diasHasta(t.fechaPago);
+    const diasColor = dias!==null&&dias<=5?'var(--danger)':dias!==null&&dias<=10?'var(--warning)':'var(--text2)';
+    return `<div class="credit-card-visual">
+      <div class="cc-bank">${t.nombre}</div>
+      <div class="cc-digits">•••• •••• •••• ${t.digitos}</div>
+      <div class="cc-cupo-bar"><div class="cc-cupo-fill" style="width:${pct}%"></div></div>
+      <div class="cc-amounts"><span>Usado: ${cop(t.saldo)}</span><span>Disponible: ${cop(t.cupo-t.saldo)}</span></div>
+      <div class="cc-footer">
+        <div class="cc-dias" style="color:${diasColor}">
+          <span style="color:${diasColor};font-size:20px;font-family:'DM Mono',monospace">${dias!==null?dias:'—'}</span>
+          días para pagar
+        </div>
+        <div class="cc-pago">Mín: ${cop(t.pagoMinimo)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  tb.innerHTML = state.tarjetas.map(t=>{
+    const dias = diasHasta(t.fechaPago);
+    const diasBadge = dias!==null ? `<span class="badge ${dias<=5?'badge-red':dias<=10?'badge-yellow':'badge-green'}">${dias}d</span>` : '—';
+    return `<tr>
+      <td class="name-col">${t.nombre}</td><td>${t.digitos}</td>
+      <td>${cop(t.cupo)}</td><td style="color:var(--accent3)">${cop(t.saldo)}</td>
+      <td style="color:var(--accent2)">${cop(t.cupo-t.saldo)}</td>
+      <td>${cop(t.pagoMinimo)}</td><td>${t.pagoTotal?cop(t.pagoTotal):'—'}</td>
+      <td>${t.fechaPago||'—'}</td><td>${diasBadge}</td>
+      <td class="action-col">
+        <button class="btn btn-edit" onclick="editarTarjeta(${t.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarTarjeta(${t.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== DEUDAS =====
+function guardarDeuda() {
+  const desc = document.getElementById('deu-desc').value.trim();
+  const monto = Number(document.getElementById('deu-monto').value)||0;
+  const tasa = Number(document.getElementById('deu-tasa').value)||0;
+  const cuotasTotales = Number(document.getElementById('deu-cuotas-totales').value)||null;
+  const cuotasPagadas = Number(document.getElementById('deu-cuotas-pagadas').value)||0;
+  const editId = document.getElementById('deu-edit-id').value;
+  if (!desc||!monto) { toast('Completa descripción y monto','error'); return; }
+
+  if (editId) {
+    const d = state.deudas.find(x=>x.id==editId);
+    if (d) Object.assign(d, {descripcion:desc,monto,tasa,cuotasTotales,cuotasPagadas});
+  } else {
+    state.deudas.push({id:uid(),descripcion:desc,monto,tasa,cuotasTotales,cuotasPagadas});
+  }
+  closeModal('modal-deuda');
+  document.getElementById('deu-edit-id').value='';
+  saveAndRefresh(); renderDeudas(); toast('Deuda guardada');
+}
+
+function editarDeuda(id) {
+  const d = state.deudas.find(x=>x.id===id);
+  if (!d) return;
+  document.getElementById('modal-deuda-title').textContent = 'Editar deuda';
+  document.getElementById('deu-edit-id').value = id;
+  document.getElementById('deu-desc').value = d.descripcion;
+  document.getElementById('deu-monto').value = d.monto;
+  document.getElementById('deu-tasa').value = d.tasa||0;
+  document.getElementById('deu-cuotas-totales').value = d.cuotasTotales||'';
+  document.getElementById('deu-cuotas-pagadas').value = d.cuotasPagadas||0;
+  openModal('modal-deuda');
+}
+
+function borrarDeuda(id) {
+  state.deudas = state.deudas.filter(d=>d.id!==id);
+  saveAndRefresh(); renderDeudas(); toast('Deuda eliminada');
+}
+
+function renderDeudas() {
+  const tb = document.getElementById('tbody-deudas');
+  if (!tb) return;
+  if (!state.deudas.length) { tb.innerHTML='<tr><td colspan="6" class="empty-state">Sin deudas registradas</td></tr>'; return; }
+  tb.innerHTML = state.deudas.map(d=>{
+    const restantes = d.cuotasTotales ? Math.max(d.cuotasTotales-(d.cuotasPagadas||0),0) : '—';
+    const pct = d.cuotasTotales&&d.cuotasPagadas ? Math.round(d.cuotasPagadas/d.cuotasTotales*100) : null;
+    return `<tr>
+      <td class="name-col">${d.descripcion}</td>
+      <td style="color:var(--accent3)">${cop(d.monto)}</td>
+      <td>${d.tasa||'—'}%</td>
+      <td>${d.cuotasPagadas??'—'} ${pct?`<span class="badge badge-blue">${pct}%</span>`:''}</td>
+      <td>${restantes}</td>
+      <td class="action-col">
+        <button class="btn btn-edit" onclick="editarDeuda(${d.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarDeuda(${d.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== ACCIONES =====
+function guardarAccion() {
+  const simbolo = document.getElementById('acc-simbolo').value.trim().toUpperCase();
+  const nombre = document.getElementById('acc-nombre').value.trim();
+  const cantidad = Number(document.getElementById('acc-cantidad').value)||0;
+  const precioCompra = Number(document.getElementById('acc-precio-compra').value)||0;
+  const precioActual = Number(document.getElementById('acc-precio-actual').value)||0;
+  const dividendos = Number(document.getElementById('acc-dividendos').value)||0;
+  const editId = document.getElementById('acc-edit-id').value;
+  if (!simbolo||!cantidad||!precioCompra) { toast('Revisa símbolo, cantidad y precio','error'); return; }
+
+  if (editId) {
+    const a = state.patrimonio.acciones.find(x=>x.id==editId);
+    if (a) Object.assign(a, {simbolo,nombre,cantidad,precioCompra,precioActual,dividendosAcum:dividendos});
+  } else {
+    state.patrimonio.acciones.push({id:uid(),simbolo,nombre,cantidad,precioCompra,precioActual,dividendosAcum:dividendos});
+  }
+  closeModal('modal-accion');
+  document.getElementById('acc-edit-id').value='';
+  saveAndRefresh(); renderAcciones(); renderPatrimonioCards(); toast('Acción guardada');
+}
+
+function editarAccion(id) {
+  const a = state.patrimonio.acciones.find(x=>x.id===id);
+  if (!a) return;
+  document.getElementById('modal-accion-title').textContent = 'Editar acción';
+  document.getElementById('acc-edit-id').value = id;
+  document.getElementById('acc-simbolo').value = a.simbolo;
+  document.getElementById('acc-nombre').value = a.nombre||'';
+  document.getElementById('acc-cantidad').value = a.cantidad;
+  document.getElementById('acc-precio-compra').value = a.precioCompra;
+  document.getElementById('acc-precio-actual').value = a.precioActual||'';
+  document.getElementById('acc-dividendos').value = a.dividendosAcum||0;
+  openModal('modal-accion');
+}
+
+function borrarAccion(id) {
+  state.patrimonio.acciones = state.patrimonio.acciones.filter(a=>a.id!==id);
+  saveAndRefresh(); renderAcciones(); renderPatrimonioCards(); toast('Acción eliminada');
+}
+
+async function actualizarPrecioAccion(id) {
+  const a = state.patrimonio.acciones.find(x=>x.id===id);
+  if (!a) return;
+  try {
+    toast('Consultando Finnhub...','');
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${a.simbolo}&token=${FINNHUB_API_KEY}`);
+    const d = await r.json();
+    if (!d.c) { toast('No se encontró precio','error'); return; }
+    a.precioActual = d.c;
+    saveAndRefresh(); renderAcciones(); renderPatrimonioCards();
+    toast(`${a.simbolo}: ${d.c}`);
+  } catch(e) { toast('Error al consultar precio','error'); }
+}
+
+function renderAcciones() {
+  const tb = document.getElementById('tbody-acciones');
+  if (!tb) return;
+  if (!state.patrimonio.acciones.length) { tb.innerHTML='<tr><td colspan="10" class="empty-state">Sin acciones registradas</td></tr>'; return; }
+  tb.innerHTML = state.patrimonio.acciones.map(a=>{
+    const inv = a.cantidad*a.precioCompra;
+    const val = a.precioActual?a.cantidad*a.precioActual:0;
+    const gp = val+(a.dividendosAcum||0)-inv;
+    const gpColor = gp>=0?'var(--accent2)':'var(--accent3)';
+    return `<tr>
+      <td><strong style="color:var(--accent)">${a.simbolo}</strong></td>
+      <td class="name-col">${a.nombre||'—'}</td>
+      <td>${a.cantidad}</td>
+      <td>${cop(a.precioCompra)}</td>
+      <td>${a.precioActual?cop(a.precioActual):'—'}</td>
+      <td>${cop(inv)}</td>
+      <td>${val?cop(val):'—'}</td>
+      <td>${cop(a.dividendosAcum||0)}</td>
+      <td style="color:${gpColor}">${gp>=0?'+':''}${cop(gp)}</td>
+      <td class="action-col">
+        <button class="btn btn-outline btn-sm" onclick="actualizarPrecioAccion(${a.id})" title="Actualizar precio">↻</button>
+        <button class="btn btn-edit" onclick="editarAccion(${a.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarAccion(${a.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ===== FONDOS =====
+function guardarFondo() {
+  const nombre = document.getElementById('fon-nombre').value.trim();
+  const tipo = document.getElementById('fon-tipo').value;
+  const saldo = Number(document.getElementById('fon-saldo').value)||0;
+  const tasa = Number(document.getElementById('fon-tasa').value)||0;
+  const notas = document.getElementById('fon-notas').value.trim();
+  const editId = document.getElementById('fon-edit-id').value;
+  if (!nombre||!saldo) { toast('Nombre y saldo requeridos','error'); return; }
+
+  if (editId) {
+    const f = state.patrimonio.fondos.find(x=>x.id==editId);
+    if (f) Object.assign(f, {nombre,tipo,saldo,tasa,notas});
+  } else {
+    state.patrimonio.fondos.push({id:uid(),nombre,tipo,saldo,tasa,notas});
+  }
+  closeModal('modal-fondo');
+  document.getElementById('fon-edit-id').value='';
+  saveAndRefresh(); renderFondos(); renderPatrimonioCards(); toast('Fondo guardado');
+}
+
+function editarFondo(id) {
+  const f = state.patrimonio.fondos.find(x=>x.id===id);
+  if (!f) return;
+  document.getElementById('modal-fondo-title').textContent = 'Editar fondo';
+  document.getElementById('fon-edit-id').value = id;
+  document.getElementById('fon-nombre').value = f.nombre;
+  document.getElementById('fon-tipo').value = f.tipo;
+  document.getElementById('fon-saldo').value = f.saldo;
+  document.getElementById('fon-tasa').value = f.tasa||0;
+  document.getElementById('fon-notas').value = f.notas||'';
+  openModal('modal-fondo');
+}
+
+function borrarFondo(id) {
+  state.patrimonio.fondos = state.patrimonio.fondos.filter(f=>f.id!==id);
+  saveAndRefresh(); renderFondos(); renderPatrimonioCards(); toast('Fondo eliminado');
+}
+
+function renderFondos() {
+  const tb = document.getElementById('tbody-fondos');
+  if (!tb) return;
+  if (!state.patrimonio.fondos.length) { tb.innerHTML='<tr><td colspan="6" class="empty-state">Sin fondos registrados</td></tr>'; return; }
+  tb.innerHTML = state.patrimonio.fondos.map(f=>`
+    <tr>
+      <td class="name-col">${f.nombre}</td>
+      <td><span class="badge badge-blue">${f.tipo}</span></td>
+      <td style="color:var(--accent2)">${cop(f.saldo)}</td>
+      <td>${f.tasa||'—'}%</td>
+      <td style="font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text3)">${f.notas||'—'}</td>
+      <td class="action-col">
+        <button class="btn btn-edit" onclick="editarFondo(${f.id})">✏</button>
+        <button class="btn btn-danger" onclick="borrarFondo(${f.id})">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderPatrimonioCards() {
+  const div = document.getElementById('patrimonio-cards');
+  if (!div) return;
+  const c = state.cuentas;
+  const totalCuentas = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal;
+  let totalAcciones=0;
+  state.patrimonio.acciones.forEach(a=>{
+    totalAcciones += a.precioActual ? a.cantidad*a.precioActual : a.cantidad*a.precioCompra;
+  });
+  const totalFondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
+  const totalActivos = totalCuentas+totalAcciones+totalFondos;
+  const totalDeudas = state.deudas.reduce((s,d)=>s+(d.monto||0),0)+state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
+  const neto = totalActivos-totalDeudas;
+
+  div.innerHTML = `
+    <div class="card green"><div class="card-label">Activos totales</div><div class="card-value">${cop(totalActivos)}</div><div class="card-sub">Cuentas + Acciones + Fondos</div></div>
+    <div class="card red"><div class="card-label">Pasivos totales</div><div class="card-value negative">${cop(totalDeudas)}</div><div class="card-sub">Deudas + Tarjetas</div></div>
+    <div class="card ${neto>=0?'green':'red'}"><div class="card-label">Patrimonio neto</div><div class="card-value ${neto>=0?'positive':'negative'}">${cop(neto)}</div></div>
+  `;
+}
+
+function switchTab(tab) {
+  document.getElementById('tab-acciones').style.display = tab==='acciones'?'block':'none';
+  document.getElementById('tab-fondos').style.display = tab==='fondos'?'block':'none';
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', (i===0&&tab==='acciones')||(i===1&&tab==='fondos'));
+  });
+}
+
+// ===== KONRAD =====
+function registrarKonrad() {
+  const periodo = document.getElementById('konrad-periodo').value;
+  const sueldo = Number(document.getElementById('konrad-sueldo').value)||0;
+  const recargo = Number(document.getElementById('konrad-recargo').value)||0;
+  const fs = Number(document.getElementById('konrad-fondo-solidaridad').value)||0;
+  const fsub = Number(document.getElementById('konrad-fondo-subsistencia').value)||0;
+  const pension = Number(document.getElementById('konrad-pension').value)||0;
+  const salud = Number(document.getElementById('konrad-salud').value)||0;
+  const fa = Number(document.getElementById('konrad-fondo-ahorro').value)||0;
+  const fp = Number(document.getElementById('konrad-fondo-prestamo').value)||0;
+  const prepaga = Number(document.getElementById('konrad-prepaga').value)||0;
+  const retencion = Number(document.getElementById('konrad-retencion').value)||0;
+  if (!periodo||!sueldo) { toast('Periodo y sueldo requeridos','error'); return; }
+
+  const totalPagos = sueldo+recargo;
+  const totalDed = fs+fsub+pension+salud+fa+fp+prepaga+retencion;
+  const neto = totalPagos-totalDed;
+  const fecha = periodo+'-01';
+
+  state.nominaKonrad.push({id:uid(),periodo,sueldoBasico:sueldo,totalPagos,totalDeducciones:totalDed,totalAPagar:neto});
+  state.ingresos.push({id:uid(),fecha,descripcion:`Nómina Konrad ${periodo}`,monto:totalPagos,categoria:'Salario',cuenta:'Bancolombia'});
+  ajustarCuenta('Bancolombia', totalPagos);
+
+  const addGasto = (desc, monto, cat='Otro') => {
+    if (!monto) return;
+    state.gastos.push({id:uid(),fecha,descripcion:desc,monto,categoria:cat,cuenta:'Bancolombia'});
+    ajustarCuenta('Bancolombia',-monto);
+  };
+  addGasto('Fondo solidaridad Konrad',fs,'Otro');
+  addGasto('Fondo subsistencia Konrad',fsub,'Otro');
+  addGasto('Pensión empleado Konrad',pension,'Otro');
+  addGasto('Salud empleado Konrad',salud,'Salud');
+  addGasto('Fondo empleados (ahorro)',fa,'Ahorro');
+  addGasto('Fondo empleados (préstamo)',fp,'Deudas/Cuotas');
+  addGasto('Medicina prepagada Konrad',prepaga,'Salud');
+  addGasto('Retención en la fuente Konrad',retencion,'Otro');
+
+  closeModal('modal-konrad');
+  saveAndRefresh(); renderKonrad(); toast('Nómina Konrad registrada');
+}
+
+function renderKonrad() {
+  const tb = document.getElementById('tbody-konrad');
+  if (!tb) return;
+  if (!state.nominaKonrad.length) { tb.innerHTML='<tr><td colspan="5" class="empty-state">Sin nóminas registradas</td></tr>'; return; }
+  tb.innerHTML = state.nominaKonrad.slice().reverse().map(n=>`
+    <tr>
+      <td class="name-col">${n.periodo}</td>
+      <td>${cop(n.sueldoBasico)}</td>
+      <td style="color:var(--accent2)">${cop(n.totalPagos)}</td>
+      <td style="color:var(--accent3)">${cop(n.totalDeducciones)}</td>
+      <td style="color:var(--accent);font-weight:500">${cop(n.totalAPagar)}</td>
+    </tr>`).join('');
+}
+
+// ===== CUENTAS =====
+function renderCuentas() {
+  const grid = document.getElementById('cuentas-form-grid');
+  const display = document.getElementById('accounts-display');
+  if (!grid||!display) return;
+  const campos = [
+    ['nequi','Nequi'],['nequiNegocios','Nequi Negocios'],
+    ['daviplata','Daviplata'],['bancolombia','Bancolombia'],
+    ['davivienda','Davivienda'],['paypal','PayPal']
+  ];
+  grid.innerHTML = campos.map(([k,label])=>`
+    <div class="form-group">
+      <label>${label}</label>
+      <input type="number" id="cta-${k}" value="${state.cuentas[k]||0}">
+    </div>`).join('');
+  const c = state.cuentas;
+  const total = Object.values(c).reduce((a,b)=>a+(b||0),0);
+  display.innerHTML = campos.map(([k,label])=>`
+    <div class="account-chip">
+      <div class="acc-name">${label}</div>
+      <div class="acc-val">${cop(state.cuentas[k])}</div>
+    </div>`).join('') +
+    `<div class="account-chip" style="border-color:var(--accent)">
+      <div class="acc-name" style="color:var(--accent)">TOTAL</div>
+      <div class="acc-val" style="color:var(--accent)">${cop(total)}</div>
+    </div>`;
+}
+
+function guardarCuentas() {
+  ['nequi','nequiNegocios','daviplata','bancolombia','davivienda','paypal'].forEach(k=>{
+    const el = document.getElementById('cta-'+k);
+    if (el) state.cuentas[k] = Number(el.value)||0;
+  });
+  saveAndRefresh(); renderCuentas(); toast('Saldos actualizados');
+}
+
+// ===== DASHBOARD =====
+function calcularTotales() {
+  const totalIngresos = state.ingresos.reduce((s,i)=>s+i.monto,0);
+  const totalGastos = state.gastos.reduce((s,g)=>s+g.monto,0);
+  const c = state.cuentas;
+  const totalCuentas = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal;
+  let totalAcciones=0;
+  state.patrimonio.acciones.forEach(a=>{
+    totalAcciones += a.precioActual?a.cantidad*a.precioActual:a.cantidad*a.precioCompra;
+  });
+  const totalFondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
+  const totalActivos = totalCuentas+totalAcciones+totalFondos;
+  const totalDeudas = state.deudas.reduce((s,d)=>s+(d.monto||0),0)+state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
+  const saldo = totalIngresos-totalGastos;
+  return {totalIngresos,totalGastos,saldo,totalActivos,totalDeudas,neto:totalActivos-totalDeudas};
+}
+
+function renderDashboard() {
+  const t = calcularTotales();
+  const mes = mesActual();
+  const ingMes = state.ingresos.filter(i=>i.fecha&&i.fecha.startsWith(mes)).reduce((s,i)=>s+i.monto,0);
+  const gasMes = state.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mes)).reduce((s,g)=>s+g.monto,0);
+
+  document.getElementById('dashCards').innerHTML = `
+    <div class="card green">
+      <div class="card-label">Ingresos este mes</div>
+      <div class="card-value positive">+${cop(ingMes)}</div>
+      <div class="card-sub">Total acumulado: ${cop(t.totalIngresos)}</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Gastos este mes</div>
+      <div class="card-value negative">-${cop(gasMes)}</div>
+      <div class="card-sub">Total acumulado: ${cop(t.totalGastos)}</div>
+    </div>
+    <div class="card ${ingMes-gasMes>=0?'blue':'red'}">
+      <div class="card-label">Flujo del mes</div>
+      <div class="card-value ${ingMes-gasMes>=0?'positive':'negative'}">${cop(ingMes-gasMes)}</div>
+      <div class="card-sub">${ingMes-gasMes>=0?'Superávit':'Déficit'}</div>
+    </div>
+    <div class="card ${t.neto>=0?'green':'red'}">
+      <div class="card-label">Patrimonio neto</div>
+      <div class="card-value ${t.neto>=0?'positive':'negative'}">${cop(t.neto)}</div>
+      <div class="card-sub">Activos: ${cop(t.totalActivos)} · Deudas: ${cop(t.totalDeudas)}</div>
+    </div>
+  `;
+  renderCharts();
+}
+
+// ===== CHARTS =====
+function destroyChart(key) {
+  if (charts[key]) { charts[key].destroy(); charts[key]=null; }
+}
+
+function renderCharts() {
+  // Ingresos vs Gastos últimos 6 meses
+  destroyChart('ingGas');
+  const ingMes = agruparPorMes(state.ingresos);
+  const gasMes = agruparPorMes(state.gastos);
+  const allMeses = Array.from(new Set([...Object.keys(ingMes),...Object.keys(gasMes)])).sort().slice(-6);
+  const ctx1 = document.getElementById('chart-ing-gas');
+  if (ctx1) charts.ingGas = new Chart(ctx1, {
+    type:'bar',
+    data:{
+      labels: allMeses,
+      datasets:[
+        {label:'Ingresos',data:allMeses.map(m=>ingMes[m]||0),backgroundColor:'rgba(56,201,139,0.7)',borderRadius:4},
+        {label:'Gastos',data:allMeses.map(m=>gasMes[m]||0),backgroundColor:'rgba(247,114,79,0.7)',borderRadius:4}
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{position:'bottom',labels:{color:'#8a92a8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#5a6278'},grid:{color:'#1e2433'}},
+        y:{ticks:{color:'#5a6278'},grid:{color:'#1e2433'}}
+      }
+    }
+  });
+
+  // Pie gastos por categoría
+  destroyChart('pie');
+  const catGas = {};
+  state.gastos.forEach(g=>{ catGas[g.categoria]=(catGas[g.categoria]||0)+g.monto; });
+  const ctx2 = document.getElementById('chart-pie');
+  const cats2 = Object.keys(catGas);
+  if (ctx2 && cats2.length) charts.pie = new Chart(ctx2, {
+    type:'doughnut',
+    data:{
+      labels:cats2,
+      datasets:[{data:cats2.map(c=>catGas[c]),backgroundColor:cats2.map(c=>CAT_COLORS[c]||'#8a92a8'),borderWidth:0}]
+    },
+    options:{
+      responsive:true,cutout:'65%',
+      plugins:{legend:{position:'bottom',labels:{color:'#8a92a8',font:{size:11},boxWidth:10}}}
+    }
+  });
+
+  // Evolución patrimonial (línea con todos los meses)
+  destroyChart('patrimonio');
+  const ctx3 = document.getElementById('chart-patrimonio');
+  const mesesAll = Array.from(new Set([...Object.keys(ingMes),...Object.keys(gasMes)])).sort();
+  let acumIng=0, acumGas=0;
+  const patriLine = mesesAll.map(m=>{ acumIng+=(ingMes[m]||0); acumGas+=(gasMes[m]||0); return acumIng-acumGas; });
+  if (ctx3&&mesesAll.length) charts.patrimonio = new Chart(ctx3, {
+    type:'line',
+    data:{
+      labels:mesesAll,
+      datasets:[{
+        label:'Saldo acumulado',data:patriLine,
+        borderColor:'var(--accent)',backgroundColor:'rgba(79,142,247,0.08)',
+        fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'var(--accent)'
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{color:'#8a92a8',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#5a6278'},grid:{color:'#1e2433'}},
+        y:{ticks:{color:'#5a6278'},grid:{color:'#1e2433'}}
+      }
+    }
+  });
+
+  // Bar horizontal cuentas
+  destroyChart('cuentas');
+  const ctx4 = document.getElementById('chart-cuentas');
+  const c = state.cuentas;
+  const ctaLabels = ['Nequi','Nequi Neg.','Daviplata','Bancolombia','Davivienda','PayPal'];
+  const ctaVals = [c.nequi,c.nequiNegocios,c.daviplata,c.bancolombia,c.davivienda,c.paypal];
+  if (ctx4) charts.cuentas = new Chart(ctx4, {
+    type:'bar',
+    data:{
+      labels:ctaLabels,
+      datasets:[{
+        label:'Saldo',data:ctaVals,
+        backgroundColor:'rgba(79,142,247,0.6)',borderRadius:4
+      }]
+    },
+    options:{
+      indexAxis:'y',responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#5a6278'},grid:{color:'#1e2433'}},
+        y:{ticks:{color:'#8a92a8'},grid:{color:'#1e2433'}}
+      }
+    }
+  });
+}
+
+// ===== GOOGLE DRIVE SYNC =====
+const DRIVE_FILE_ID   = '1HYC50fvTXpU2QfCaetQO52NvhRwT8S1B';
+const DRIVE_FOLDER_ID = '1yM3gh1yxft7JUDZInvxEcZtwxT1jQg9O';
+let driveToken        = localStorage.getItem('drive_token') || null;
+let driveTokenExpiry  = Number(localStorage.getItem('drive_token_expiry') || 0);
+let syncTimer         = null;
+
+function setDriveStatus(s) {
+  const el = document.getElementById('driveStatus');
+  if (!el) return;
+  const m = { ok:{t:'🟢 Drive',c:'var(--accent2)'}, syncing:{t:'🔄 Sync…',c:'var(--accent4)'},
+              error:{t:'🔴 Drive',c:'var(--danger)'}, offline:{t:'⚪ Drive',c:'var(--text3)'},
+              auth:{t:'🔑 Conectar',c:'var(--accent)'} };
+  const v = m[s]||m.offline;
+  el.textContent=v.t; el.style.color=v.c; el.style.borderColor=v.c;
+}
+
+function tokenValido() { return driveToken && Date.now() < driveTokenExpiry - 60000; }
+
+function loginGoogle() {
+  // Google OAuth2 implicit flow
+  // INSTRUCCIONES: Para habilitar el login real, crea un proyecto en console.cloud.google.com,
+  // habilita la Drive API y crea credenciales OAuth "Aplicación web", luego reemplaza '' con tu CLIENT_ID
+  const CLIENT_ID = '';
+  if (!CLIENT_ID) {
+    toast('Para login automático configura CLIENT_ID. Por ahora usa ☁ Drive con token manual.','error');
+    const t = prompt('Pega tu Google OAuth2 Bearer Token (opcional):');
+    if (t && t.trim()) {
+      driveToken = t.trim();
+      driveTokenExpiry = Date.now() + 3600000;
+      localStorage.setItem('drive_token', driveToken);
+      localStorage.setItem('drive_token_expiry', String(driveTokenExpiry));
+      setDriveStatus('ok');
+      toast('Token guardado. Sincronizando…');
+      guardarEnDrive();
+    }
+    return;
+  }
+  const base = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: window.location.href.split('?')[0].split('#')[0],
+    response_type: 'token',
+    scope: 'https://www.googleapis.com/auth/drive.file'
+  });
+  window.location.href = base + '?' + params;
+}
+
+function detectarTokenURL() {
+  const hash = window.location.hash;
+  if (!hash.includes('access_token=')) return;
+  const p = new URLSearchParams(hash.substring(1));
+  driveToken = p.get('access_token');
+  driveTokenExpiry = Date.now() + Number(p.get('expires_in')||3600)*1000;
+  localStorage.setItem('drive_token', driveToken);
+  localStorage.setItem('drive_token_expiry', String(driveTokenExpiry));
+  window.history.replaceState({}, document.title, window.location.pathname);
+  toast('✅ Conectado a Google Drive');
+  setDriveStatus('ok');
+}
+
+async function cargarDesdeDrive() {
+  if (!tokenValido()) { setDriveStatus('auth'); return; }
+  setDriveStatus('syncing');
+  try {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${DRIVE_FILE_ID}?alt=media`,
+      { headers: { Authorization: `Bearer ${driveToken}` } });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    state = { ...state, ...data };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    renderAll();
+    setDriveStatus('ok');
+    toast('✅ Sincronizado desde Drive');
+  } catch(e) {
+    console.error(e);
+    setDriveStatus('error');
+    toast('Error al leer Drive — datos locales activos','error');
+  }
+}
+
+async function guardarEnDrive() {
+  if (!tokenValido()) { setDriveStatus('auth'); return; }
+  setDriveStatus('syncing');
+  try {
+    if (!state.meta) state.meta = {};
+    state.meta.ultimaActualizacion = new Date().toISOString().slice(0,10);
+    const r = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${DRIVE_FILE_ID}?uploadType=media`,
+      { method:'PATCH', headers:{ Authorization:`Bearer ${driveToken}`, 'Content-Type':'application/json' },
+        body: JSON.stringify(state, null, 2) });
+    if (!r.ok) throw new Error(r.status);
+    setDriveStatus('ok');
+    const t = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+    const el = document.getElementById('lastSaved');
+    if (el) el.textContent = `☁ ${t}`;
+  } catch(e) {
+    console.error(e);
+    setDriveStatus('error');
+  }
+}
+
+function scheduleDriveSync() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>guardarEnDrive(), 2500);
+}
+
+function sincronizarDrive() {
+  if (!tokenValido()) { loginGoogle(); return; }
+  guardarEnDrive();
+  toast('Guardando en Drive…');
+}
+
+// ===== EXPORT / IMPORT LOCAL =====
+function exportarJSON() {
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`finanzas_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Backup local exportado');
+}
+
+function importarJSON(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      state = {...state,...JSON.parse(ev.target.result)};
+      saveAndRefresh();
+      toast('Datos importados');
+    } catch(err) { toast('Archivo inválido','error'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// ===== CIERRE MENSUAL (FOTOGRAFÍA FINANCIERA) =====
+function ejecutarCierreMensual() {
+  const mes = mesActual();
+  if (!state.cierresMensuales) state.cierresMensuales = [];
+  if (state.cierresMensuales.find(c=>c.mes===mes)) {
+    toast('Ya existe cierre para ' + mes,'error'); return;
+  }
+  const c = state.cuentas;
+  const totalCuentas = Object.values(c).reduce((a,b)=>a+(b||0),0);
+  let totalAcciones=0;
+  state.patrimonio.acciones.forEach(a=>{
+    totalAcciones += (a.precioActual||a.precioCompra)*a.cantidad;
+  });
+  const totalFondos  = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
+  const totalDeudas  = state.deudas.reduce((s,d)=>s+(d.monto||0),0)
+                     + state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
+  const ingMes = state.ingresos.filter(i=>i.fecha&&i.fecha.startsWith(mes)).reduce((s,i)=>s+i.monto,0);
+  const gasMes = state.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mes)).reduce((s,g)=>s+g.monto,0);
+  const activos = totalCuentas+totalAcciones+totalFondos;
+  state.cierresMensuales.push({
+    mes, fechaCierre: new Date().toISOString(),
+    ingresos:ingMes, gastos:gasMes, flujo:ingMes-gasMes,
+    activos, deudas:totalDeudas, patrimonioNeto:activos-totalDeudas,
+    saldoCuentas:{...c},
+    snapshot:{
+      tarjetas: state.tarjetas.map(t=>({nombre:t.nombre,digitos:t.digitos,saldo:t.saldo})),
+      deudas:   state.deudas.map(d=>({descripcion:d.descripcion,monto:d.monto,cuotasPagadas:d.cuotasPagadas}))
+    }
+  });
+  saveAndRefresh(); renderCierres();
+  toast('📸 Cierre de ' + mes + ' guardado');
+}
+
+function renderCierres() {
+  const tb = document.getElementById('tbody-cierres');
+  if (!tb) return;
+  const list = (state.cierresMensuales||[]).slice().reverse();
+  if (!list.length) {
+    tb.innerHTML='<tr><td colspan="6" class="empty-state"><div class="icon">📅</div>Sin cierres aún — haz el primero a fin de mes</td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(c=>`<tr>
+    <td class="name-col">${c.mes}</td>
+    <td style="color:var(--accent2)">+${cop(c.ingresos)}</td>
+    <td style="color:var(--accent3)">-${cop(c.gastos)}</td>
+    <td style="color:${c.flujo>=0?'var(--accent2)':'var(--accent3)'}">${cop(c.flujo)}</td>
+    <td style="color:var(--accent)">${cop(c.activos)}</td>
+    <td style="color:${c.patrimonioNeto>=0?'var(--accent2)':'var(--accent3)'};font-weight:500">${cop(c.patrimonioNeto)}</td>
+  </tr>`).join('');
+}
+
+// Override guardarEstado para disparar Drive sync
+const _guardarLocal = function() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+};
+function guardarEstado() {
+  _guardarLocal();
+  scheduleDriveSync();
+}
+
+// ===== RENDER ALL =====
+function renderAll() {
+  renderTablaIngresos();
+  renderGastos();
+  renderDeudas();
+  renderTarjetas();
+  renderKonrad();
+  renderAcciones();
+  renderFondos();
+  renderPatrimonioCards();
+  renderPresupuesto();
+  renderCuentas();
+  renderDashboard();
+  renderCierres();
+}
+
+// ===== DATOS INICIALES =====
+const DATOS_INICIALES = {
+  ingresos: [
+    { id:1001, fecha:"2026-03-27", descripcion:"Nómina Konrad Lorenz — Marzo 2026", monto:7909571, categoria:"Salario", cuenta:"Bancolombia" }
+  ],
+  gastos: [
+    { id:2001, fecha:"2026-03-27", descripcion:"AP Fondo Solidaridad FSP Colpensiones", monto:39600, categoria:"Otro", cuenta:"Bancolombia" },
+    { id:2002, fecha:"2026-03-27", descripcion:"AP Fondo Subsistencia FSP Colpensiones", monto:39600, categoria:"Otro", cuenta:"Bancolombia" },
+    { id:2003, fecha:"2026-03-27", descripcion:"Aportes Empleado Pensión Colpensiones", monto:316400, categoria:"Otro", cuenta:"Bancolombia" },
+    { id:2004, fecha:"2026-03-27", descripcion:"Aportes Empleado Salud Compensar EPS", monto:316400, categoria:"Salud", cuenta:"Bancolombia" },
+    { id:2005, fecha:"2026-03-27", descripcion:"Aportes y Ahorros Fondo de Empleados Konrad", monto:404600, categoria:"Ahorro", cuenta:"Bancolombia" },
+    { id:2006, fecha:"2026-03-27", descripcion:"Prepagada Compensar EPS", monto:641340, categoria:"Salud", cuenta:"Bancolombia" },
+    { id:2007, fecha:"2026-03-27", descripcion:"Préstamos Fondo de Empleados Konrad", monto:2116846, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" },
+    { id:2008, fecha:"2026-03-27", descripcion:"Retención en la Fuente DIAN", monto:80000, categoria:"Otro", cuenta:"Bancolombia" },
+    { id:2009, fecha:"2026-04-23", descripcion:"Cuota crédito personal Bancolombia (oblig. 300101151)", monto:1128244, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" },
+    { id:2010, fecha:"2026-04-06", descripcion:"Pago tarjeta Visa *8535", monto:3558685, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" },
+    { id:2011, fecha:"2026-04-06", descripcion:"Pago tarjeta Mastercard *8089", monto:570637, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" },
+    { id:2012, fecha:"2026-04-06", descripcion:"Pago tarjeta Mastercard *7443", monto:149, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" },
+    { id:2013, fecha:"2026-04-06", descripcion:"Pago tarjeta Visa *3995", monto:1066906, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" },
+    { id:2014, fecha:"2026-04-06", descripcion:"Pago tarjeta Amex *1951", monto:491099, categoria:"Deudas/Cuotas", cuenta:"Bancolombia" }
+  ],
+  nominaKonrad: [{ id:3001, periodo:"2026-03", sueldoBasico:7872000, recargoNocturno:37571, totalPagos:7909571, totalDeducciones:3954786, totalAPagar:3954785 }],
+  tarjetas: [
+    { id:4001, nombre:"Bancolombia Visa",       digitos:"8535", cupo:3850000, saldo:3558685, pagoMinimo:307446, pagoTotal:3558685, fechaCorte:"2026-03-15", fechaPago:"2026-04-06" },
+    { id:4002, nombre:"Bancolombia Mastercard", digitos:"8089", cupo:1116500, saldo:570637,  pagoMinimo:450088, pagoTotal:570637,  fechaCorte:"2026-03-15", fechaPago:"2026-04-06" },
+    { id:4003, nombre:"Bancolombia Mastercard", digitos:"7443", cupo:100000,  saldo:149,     pagoMinimo:149,    pagoTotal:149,     fechaCorte:"2026-03-15", fechaPago:"2026-04-06" },
+    { id:4004, nombre:"Bancolombia Visa",       digitos:"3995", cupo:1116500, saldo:1066906, pagoMinimo:79128,  pagoTotal:1066906, fechaCorte:"2026-03-15", fechaPago:"2026-04-06" },
+    { id:4005, nombre:"Bancolombia Amex",       digitos:"1951", cupo:550000,  saldo:491099,  pagoMinimo:59849,  pagoTotal:491099,  fechaCorte:"2026-03-15", fechaPago:"2026-04-06" }
+  ],
+  deudas: [
+    { id:5001, descripcion:"Crédito Personal Bancolombia (oblig. 300101151)", monto:25513802, tasa:12.60, cuotasTotales:84, cuotasPagadas:75 },
+    { id:5002, descripcion:"Crédito de Consumo Davivienda (20-997-234013-2)", monto:33424778, tasa:19.56, cuotasTotales:60, cuotasPagadas:26 },
+    { id:5003, descripcion:"KREDIVIVIENDA — Fondo de Empleados Konrad",       monto:187590934, tasa:16.05, cuotasTotales:144, cuotasPagadas:36 }
+  ],
+  patrimonio: {
+    acciones: [],
+    fondos: [{ id:6001, nombre:"Fondo de Empleados Konrad Lorenz", tipo:"Fondo empleados", saldo:51060919, tasa:0,
+               notas:"Aportes ordinarios $30.276.174 + Revalorización $4.873.979 + Ahorro permanente $13.754.073 + Int. ahorro permanente $2.156.693" }]
+  },
+  cuentas: { nequi:0, nequiNegocios:0, daviplata:0, bancolombia:0, davivienda:0, paypal:0 },
+  presupuesto: { "Alimentación":0,"Transporte":0,"Salud":0,"Vivienda":0,"Educación":0,"Ocio":0,"Servicios":0,"Ropa":0,"Deudas/Cuotas":0,"Ahorro":0,"Otro":0 },
+  cierresMensuales: [],
+  meta: { version:"9.1", creadoEn:"2026-04-16", ultimaActualizacion:"2026-04-16" }
+};
+
+// ===== INIT =====
+detectarTokenURL();
+cargarEstado();
+
+if (!state.ingresos.length && !state.gastos.length) {
+  state = { ...state, ...DATOS_INICIALES };
+  _guardarLocal();
+}
+if (!state.cierresMensuales) state.cierresMensuales = [];
+if (!state.meta) state.meta = { version:'9.1' };
+
+renderAll();
+setDriveStatus(tokenValido() ? 'ok' : 'offline');
+if (tokenValido()) {
+  cargarDesdeDrive();
+} else {
+  setTimeout(()=>toast('💡 Presiona ☁ Drive para sincronizar en la nube'),1000);
+}
+const today = new Date().toISOString().slice(0,10);
+['ing-fecha','gas-fecha'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=today; });
+</script>
+</body>
+</html>
