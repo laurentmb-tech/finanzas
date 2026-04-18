@@ -373,9 +373,35 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
 .cc-dias { font-size: 11px; }
 .cc-dias span { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; display: block; }
 .cc-pago { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent2); }
+
+/* BOTÓN FLOTANTE GUARDAR */
+.fab-guardar {
+  position: fixed; bottom: 24px; right: 24px; z-index: 500;
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 22px;
+  background: var(--accent2); color: #0f1117;
+  border: none; border-radius: 50px;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(56,201,139,0.45);
+  transition: all 0.2s;
+}
+.fab-guardar:hover { background: #4dd9a0; transform: translateY(-2px); }
+.fab-guardar:active { transform: scale(0.96); }
+.fab-guardar.guardando { background: var(--accent4); box-shadow: 0 4px 20px rgba(240,192,64,0.4); }
+.fab-guardar.error     { background: var(--danger); color: #fff; box-shadow: 0 4px 20px rgba(224,82,82,0.4); }
+@media (max-width: 768px) {
+  .fab-guardar { bottom: 16px; right: 16px; padding: 12px 18px; font-size: 13px; }
+}
 </style>
 </head>
 <body>
+
+<!-- BOTÓN FLOTANTE GUARDAR -->
+<button class="fab-guardar" id="fab-guardar" onclick="guardarManual()">
+  <span id="fab-icon">☁</span>
+  <span id="fab-text">Guardar</span>
+</button>
 
 <!-- SIDEBAR -->
 <nav class="sidebar" id="sidebar">
@@ -2540,7 +2566,66 @@ const DATOS_INICIALES = {
   meta: { version:"9.1", creadoEn:"2026-04-16", ultimaActualizacion:"2026-04-16" }
 };
 
-// ===== INIT =====
+// ===== BOTÓN GUARDAR FLOTANTE =====
+function actualizarFab(estado) {
+  const btn = document.getElementById('fab-guardar');
+  const icon = document.getElementById('fab-icon');
+  const text = document.getElementById('fab-text');
+  if (!btn) return;
+  btn.className = 'fab-guardar';
+  if (estado === 'guardando') {
+    btn.classList.add('guardando');
+    icon.textContent = '🔄'; text.textContent = 'Guardando…';
+  } else if (estado === 'ok') {
+    icon.textContent = '✓'; text.textContent = 'Guardado';
+    setTimeout(() => { icon.textContent = '☁'; text.textContent = 'Guardar'; }, 2000);
+  } else if (estado === 'error') {
+    btn.classList.add('error');
+    icon.textContent = '⚠'; text.textContent = 'Error — reintentar';
+    setTimeout(() => { btn.className='fab-guardar'; icon.textContent='☁'; text.textContent='Guardar'; }, 3000);
+  } else {
+    icon.textContent = '☁'; text.textContent = 'Guardar';
+  }
+}
+
+async function guardarManual() {
+  actualizarFab('guardando');
+  _guardarLocal();
+  try {
+    if (!state.meta) state.meta = {};
+    state.meta.ultimaActualizacion = new Date().toISOString();
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'guardar', state }),
+    });
+    const result = await resp.json();
+    if (result.ok) {
+      actualizarFab('ok');
+      setSyncStatus('ok');
+      const t = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+      const el = document.getElementById('lastSaved');
+      if (el) el.textContent = `☁ ${t}`;
+    } else throw new Error(result.error);
+  } catch(e) {
+    actualizarFab('error');
+    setSyncStatus('error');
+    toast('Sin conexión — datos guardados localmente','error');
+  }
+}
+
+// Autoguardado cada 30 segundos
+setInterval(() => {
+  _guardarLocal();
+  // Solo sube a Sheets si hay conexión (silencioso)
+  if (navigator.onLine) {
+    guardarEnSheets().catch(()=>{});
+  }
+}, 30000);
+
+// Guardar al cerrar/recargar la página
+window.addEventListener('beforeunload', () => {
+  _guardarLocal();
+});
 detectarTokenURL();
 cargarEstado();
 
