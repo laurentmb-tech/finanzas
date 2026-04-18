@@ -1199,21 +1199,69 @@ async function cargarDesdeSheets() {
     const resp = await fetch(SCRIPT_URL + '?action=cargar');
     const result = await resp.json();
     if (result.ok && result.state) {
-      state = { ...state, ...result.state };
-      if (!state.presupuesto) state.presupuesto = {};
-      if (!state.patrimonio) state.patrimonio = { acciones:[], fondos:[] };
-      if (!state.tarjetas) state.tarjetas = [];
+      const remoto = result.state;
+      const local  = state;
+
+      // Estrategia MERGE: usar el más reciente en cada campo clave
+      // Para listas: usar la más larga (la que tiene más datos)
+      const merged = { ...local };
+
+      // Ingresos y gastos: tomar el conjunto más grande
+      if ((remoto.ingresos||[]).length > (local.ingresos||[]).length)
+        merged.ingresos = remoto.ingresos;
+      if ((remoto.gastos||[]).length > (local.gastos||[]).length)
+        merged.gastos = remoto.gastos;
+      if ((remoto.deudas||[]).length > (local.deudas||[]).length)
+        merged.deudas = remoto.deudas;
+      if ((remoto.tarjetas||[]).length > (local.tarjetas||[]).length)
+        merged.tarjetas = remoto.tarjetas;
+      if ((remoto.nominaKonrad||[]).length > (local.nominaKonrad||[]).length)
+        merged.nominaKonrad = remoto.nominaKonrad;
+      if ((remoto.cierresMensuales||[]).length > (local.cierresMensuales||[]).length)
+        merged.cierresMensuales = remoto.cierresMensuales;
+      if ((remoto.pagosPendientes||[]).length > (local.pagosPendientes||[]).length)
+        merged.pagosPendientes = remoto.pagosPendientes;
+
+      // Patrimonio: merge cuidadoso preservando activos fijos locales
+      const patriLocal  = local.patrimonio  || { acciones:[], fondos:[], activosFijos:[] };
+      const patriRemoto = remoto.patrimonio || { acciones:[], fondos:[], activosFijos:[] };
+      merged.patrimonio = {
+        acciones:     (patriRemoto.acciones||[]).length  > (patriLocal.acciones||[]).length  ? patriRemoto.acciones  : patriLocal.acciones,
+        fondos:       (patriRemoto.fondos||[]).length    > (patriLocal.fondos||[]).length    ? patriRemoto.fondos    : patriLocal.fondos,
+        activosFijos: (patriRemoto.activosFijos||[]).length > (patriLocal.activosFijos||[]).length ? patriRemoto.activosFijos : patriLocal.activosFijos,
+      };
+
+      // Cuentas: usar remoto solo si tiene valores, si no preservar local
+      const cLocal  = local.cuentas  || {};
+      const cRemoto = remoto.cuentas || {};
+      const totalRemoto = Object.values(cRemoto).reduce((a,b)=>a+(b||0),0);
+      const totalLocal  = Object.values(cLocal).reduce((a,b)=>a+(b||0),0);
+      merged.cuentas = totalRemoto > 0 ? cRemoto : cLocal;
+
+      // Presupuesto: remoto si existe
+      if (remoto.presupuesto) merged.presupuesto = remoto.presupuesto;
+
+      // Meta: tomar la más reciente
+      merged.meta = remoto.meta || local.meta;
+
+      state = merged;
       if (!state.cierresMensuales) state.cierresMensuales = [];
+      if (!state.pagosPendientes)  state.pagosPendientes  = [];
+      if (!state.patrimonio.activosFijos) state.patrimonio.activosFijos = [];
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       renderAll();
       setSyncStatus('ok');
-      toast('✅ Datos cargados desde Google Sheets');
+      toast('✅ Sincronizado con Google Sheets');
+
+      // Subir inmediatamente para que Sheets tenga los datos más completos
+      setTimeout(() => guardarEnSheets(), 1000);
       return true;
-    } else throw new Error('Sin datos');
+    } else throw new Error('Sin datos en Sheets');
   } catch(e) {
     console.error('Sheets load error:', e);
     setSyncStatus('offline');
-    toast('📱 Usando datos locales','error');
+    // Usar datos locales sin avisar con error — es el comportamiento normal offline
     return false;
   }
 }
@@ -2752,7 +2800,9 @@ function guardarActivoFijo() {
   saveAndRefresh();
   renderActivosFijos();
   renderPatrimonioCards();
-  toast('Activo guardado');
+  // Guardar inmediatamente en Sheets sin esperar el debounce
+  guardarEnSheets();
+  toast('Activo guardado y sincronizado');
 }
 
 function editarActivoFijo(id) {
@@ -3063,8 +3113,10 @@ function actualizarFab(estado) {
 }
 
 async function guardarManual() {
-  actualizarFab('guardando');
+  // Primero guardar en localStorage SIEMPRE — inmediato y confiable
   _guardarLocal();
+  actualizarFab('guardando');
+
   try {
     if (!state.meta) state.meta = {};
     state.meta.ultimaActualizacion = new Date().toISOString();
@@ -3079,11 +3131,13 @@ async function guardarManual() {
       const t = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
       const el = document.getElementById('lastSaved');
       if (el) el.textContent = `☁ ${t}`;
+      toast('✅ Guardado en Google Sheets');
     } else throw new Error(result.error);
   } catch(e) {
+    // Aunque falle Sheets, ya está guardado en localStorage
     actualizarFab('error');
     setSyncStatus('error');
-    toast('Sin conexión — datos guardados localmente','error');
+    toast('💾 Guardado localmente — sin conexión a Sheets','error');
   }
 }
 
