@@ -615,74 +615,21 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
     </section>
 
     <!-- ANÁLISIS FINANCIERO -->
-    <section id="sec-analisis" class="section">
-      <div class="section-header"><h2>🔬 Análisis financiero</h2></div>
-
-      <!-- Índice de endeudamiento -->
-      <div class="form-card" style="margin-bottom:20px">
-        <h3 style="margin-bottom:16px;font-size:14px">Índice de endeudamiento</h3>
-        <div class="cards-grid" id="analisis-cards"></div>
-        <div style="margin-top:16px" id="analisis-semaforo"></div>
-      </div>
-
-      <!-- Desglose por deuda -->
-      <div class="form-card" style="margin-bottom:20px">
-        <h3 style="margin-bottom:16px;font-size:14px">Costo mensual por deuda</h3>
-        <div id="analisis-deudas-detalle"></div>
-      </div>
-
-      <!-- Simulador de pago extra -->
-      <div class="form-card" style="margin-bottom:20px">
-        <h3 style="margin-bottom:4px;font-size:14px">Simulador — pago extra mensual</h3>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:16px">¿Cuánto ahorras si pagas un extra cada mes?</p>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
-          <div class="form-group" style="flex:1;min-width:200px">
-            <label>Deuda a acelerar</label>
-            <select id="sim-deuda-sel" onchange="actualizarSimulador()"></select>
-          </div>
-          <div class="form-group" style="flex:1;min-width:180px">
-            <label>Pago extra mensual (COP)</label>
-            <input type="number" id="sim-extra" value="200000" step="50000" oninput="actualizarSimulador()">
-          </div>
-        </div>
-        <div id="sim-resultado"></div>
-      </div>
-
-      <!-- Proyección gráfica -->
-      <div class="form-card" style="margin-bottom:20px">
-        <h3 style="margin-bottom:4px;font-size:14px">Proyección — evolución de deudas</h3>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:16px">Cómo se reduce cada deuda mes a mes pagando la cuota normal</p>
-        <canvas id="chart-proyeccion" height="220"></canvas>
-      </div>
-
-      <!-- Estrategia recomendada -->
-      <div class="form-card">
-        <h3 style="margin-bottom:16px;font-size:14px">Estrategia de pago recomendada</h3>
-        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="mostrarEstrategia('avalancha')" id="btn-avalancha">🏔 Avalancha</button>
-          <button class="btn btn-outline btn-sm" onclick="mostrarEstrategia('bola')" id="btn-bola">⛄ Bola de nieve</button>
-        </div>
-        <div id="estrategia-resultado"></div>
-      </div>
-    </section>
-
     <!-- ANÁLISIS FINANCIERO -->
     <section id="sec-analisis" class="section">
       <div class="section-header"><h2>📊 Análisis de deuda y proyección</h2></div>
 
-      <!-- Índice de endeudamiento -->
-      <div class="cards-grid" id="analisis-cards"></div>
+      <div class="cards-grid" id="analisis-cards" style="margin-bottom:20px"></div>
 
-      <!-- Simulador de pago extra -->
       <div class="form-card" style="margin-bottom:20px">
         <h3 style="margin-bottom:14px;font-size:14px">⚡ Simulador — ¿Qué pasa si pago más?</h3>
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div class="form-group" style="min-width:200px">
             <label>Pago extra mensual (COP)</label>
-            <input type="number" id="sim-extra" value="500000" oninput="renderAnalisis()">
+            <input type="number" id="sim-extra" value="500000" step="100000" oninput="renderAnalisis()">
           </div>
           <div class="form-group" style="min-width:200px">
-            <label>Aplicar estrategia</label>
+            <label>Estrategia</label>
             <select id="sim-estrategia" onchange="renderAnalisis()">
               <option value="avalancha">🏔 Avalancha (mayor interés primero)</option>
               <option value="bola">⛄ Bola de nieve (menor saldo primero)</option>
@@ -692,13 +639,11 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
         <div id="sim-resultado" style="margin-top:14px"></div>
       </div>
 
-      <!-- Proyección por deuda -->
       <div class="form-card" style="margin-bottom:20px">
         <h3 style="margin-bottom:16px;font-size:14px">📅 Proyección por crédito</h3>
         <div id="proyeccion-deudas"></div>
       </div>
 
-      <!-- Gráfico evolución deuda -->
       <div class="chart-card">
         <div class="chart-title">Evolución proyectada del total de deuda</div>
         <canvas id="chart-deuda-proyeccion" height="200"></canvas>
@@ -1192,7 +1137,6 @@ function showSection(id) {
   if (id === 'analisis') renderAnalisis();
   if (id === 'cierres') renderCierres();
   if (id === 'pagos') renderPagos();
-  if (id === 'analisis') renderAnalisis();
   if (id === 'cuentas') renderCuentas();
 }
 
@@ -2128,317 +2072,6 @@ const _guardarLocal = function() {
 function guardarEstado() {
   _guardarLocal();
   scheduleDriveSync();
-}
-
-// ===== ANÁLISIS FINANCIERO =====
-let estrategiaActual = 'avalancha';
-
-function calcularCuotaDeuda(deuda) {
-  // Si tiene cuotas totales y pagadas, estima la cuota mensual
-  if (deuda.cuotasTotales && deuda.cuotasPagadas) {
-    const restantes = deuda.cuotasTotales - deuda.cuotasPagadas;
-    if (restantes <= 0) return 0;
-    const tasaMensual = (deuda.tasa || 0) / 100 / 12;
-    if (tasaMensual === 0) return deuda.monto / restantes;
-    return deuda.monto * tasaMensual / (1 - Math.pow(1 + tasaMensual, -restantes));
-  }
-  return 0;
-}
-
-function calcularInteresMensual(deuda) {
-  const tasaMensual = (deuda.tasa || 0) / 100 / 12;
-  return deuda.monto * tasaMensual;
-}
-
-function renderAnalisis() {
-  const ingresoMensual = state.ingresos
-    .filter(i => i.fecha && i.fecha.startsWith(mesActual()))
-    .reduce((s, i) => s + i.monto, 0) ||
-    state.ingresos.slice(-3).reduce((s, i) => s + i.monto, 0) / 3 || 7909571;
-
-  const todasDeudas = [
-    ...state.deudas,
-    ...state.tarjetas.filter(t => t.saldo > 0).map(t => ({
-      id: t.id,
-      descripcion: `TC ${t.nombre} *${t.digitos}`,
-      monto: t.saldo,
-      tasa: 25.5,
-      cuotasTotales: 24,
-      cuotasPagadas: 0,
-      esTarjeta: true,
-      pagoMinimo: t.pagoMinimo
-    }))
-  ];
-
-  const totalDeuda = todasDeudas.reduce((s, d) => s + d.monto, 0);
-  const totalCuotas = todasDeudas.reduce((s, d) => {
-    if (d.esTarjeta) return s + (d.pagoMinimo || 0);
-    return s + calcularCuotaDeuda(d);
-  }, 0);
-  const totalIntereses = todasDeudas.reduce((s, d) => s + calcularInteresMensual(d), 0);
-  const pctEndeudamiento = ingresoMensual > 0 ? (totalCuotas / ingresoMensual * 100) : 0;
-
-  // Cards resumen
-  const cardsDiv = document.getElementById('analisis-cards');
-  if (cardsDiv) cardsDiv.innerHTML = `
-    <div class="card ${pctEndeudamiento > 50 ? 'red' : pctEndeudamiento > 40 ? 'yellow' : 'green'}">
-      <div class="card-label">% Ingreso en deudas</div>
-      <div class="card-value ${pctEndeudamiento > 40 ? 'negative' : 'positive'}">${pctEndeudamiento.toFixed(1)}%</div>
-      <div class="card-sub">Recomendado: máx 40%</div>
-    </div>
-    <div class="card red">
-      <div class="card-label">Intereses mensuales</div>
-      <div class="card-value negative">${cop(Math.round(totalIntereses))}</div>
-      <div class="card-sub">Lo que no se abona a capital</div>
-    </div>
-    <div class="card blue">
-      <div class="card-label">Cuotas mensuales</div>
-      <div class="card-value">${cop(Math.round(totalCuotas))}</div>
-      <div class="card-sub">${todasDeudas.length} obligaciones</div>
-    </div>
-    <div class="card ${totalDeuda > 200000000 ? 'red' : 'yellow'}">
-      <div class="card-label">Deuda total</div>
-      <div class="card-value negative">${cop(Math.round(totalDeuda))}</div>
-      <div class="card-sub">Préstamos + Tarjetas</div>
-    </div>
-  `;
-
-  // Semáforo
-  const semaforoDiv = document.getElementById('analisis-semaforo');
-  if (semaforoDiv) {
-    const color = pctEndeudamiento > 50 ? 'var(--danger)' : pctEndeudamiento > 40 ? 'var(--warning)' : 'var(--accent2)';
-    const msg = pctEndeudamiento > 50
-      ? '🔴 Nivel crítico — más de la mitad de tu ingreso va a deudas. Prioriza reducir las de mayor tasa.'
-      : pctEndeudamiento > 40
-      ? '🟡 Nivel alto — estás cerca del límite recomendado. Evita contraer nuevas deudas.'
-      : '🟢 Nivel manejable — tu carga de deuda está dentro del rango aceptable.';
-    semaforoDiv.innerHTML = `
-      <div style="background:${color}18;border:1px solid ${color}44;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--text)">
-        ${msg}
-      </div>`;
-  }
-
-  // Desglose por deuda
-  const detDiv = document.getElementById('analisis-deudas-detalle');
-  if (detDiv) {
-    detDiv.innerHTML = todasDeudas.sort((a, b) => calcularInteresMensual(b) - calcularInteresMensual(a)).map(d => {
-      const cuota = d.esTarjeta ? (d.pagoMinimo || 0) : calcularCuotaDeuda(d);
-      const interes = calcularInteresMensual(d);
-      const capital = Math.max(0, cuota - interes);
-      const pctInteres = cuota > 0 ? interes / cuota * 100 : 0;
-      const restantes = d.cuotasTotales ? d.cuotasTotales - (d.cuotasPagadas || 0) : '—';
-      return `
-        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-            <span style="font-size:13px;color:var(--text);font-family:'DM Sans',sans-serif">${d.descripcion}</span>
-            <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text2)">${cop(Math.round(cuota))}/mes</span>
-          </div>
-          <div style="display:flex;gap:4px;margin-bottom:6px">
-            <div style="height:6px;border-radius:3px 0 0 3px;background:var(--danger);width:${pctInteres.toFixed(0)}%;min-width:${interes>0?'4px':'0'}" title="Intereses"></div>
-            <div style="height:6px;border-radius:0 3px 3px 0;background:var(--accent2);flex:1" title="Capital"></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);font-family:'DM Sans',sans-serif">
-            <span>🔴 Intereses: ${cop(Math.round(interes))} (${pctInteres.toFixed(0)}%)</span>
-            <span>🟢 Capital: ${cop(Math.round(capital))}</span>
-            <span>Cuotas rest.: ${restantes}</span>
-            <span>Tasa: ${d.tasa || 0}% EA</span>
-          </div>
-        </div>`;
-    }).join('');
-  }
-
-  // Llenar selector simulador
-  const sel = document.getElementById('sim-deuda-sel');
-  if (sel) {
-    sel.innerHTML = state.deudas.map(d =>
-      `<option value="${d.id}">${d.descripcion} — ${cop(d.monto)}</option>`
-    ).join('');
-    actualizarSimulador();
-  }
-
-  // Proyección gráfica
-  renderProyeccion(todasDeudas);
-
-  // Estrategia inicial
-  mostrarEstrategia('avalancha');
-}
-
-function actualizarSimulador() {
-  const sel = document.getElementById('sim-deuda-sel');
-  const extraEl = document.getElementById('sim-extra');
-  const res = document.getElementById('sim-resultado');
-  if (!sel || !extraEl || !res) return;
-
-  const deuda = state.deudas.find(d => d.id == sel.value);
-  if (!deuda) return;
-
-  const extra = Number(extraEl.value) || 0;
-  const tasaMensual = (deuda.tasa || 0) / 100 / 12;
-  const restantes = deuda.cuotasTotales ? deuda.cuotasTotales - (deuda.cuotasPagadas || 0) : 60;
-  const cuotaNormal = calcularCuotaDeuda(deuda);
-  const cuotaConExtra = cuotaNormal + extra;
-
-  // Simular sin extra
-  let saldo = deuda.monto;
-  let mesesNormal = 0, interesNormal = 0;
-  while (saldo > 0 && mesesNormal < 600) {
-    const int = saldo * tasaMensual;
-    const cap = Math.min(cuotaNormal - int, saldo);
-    interesNormal += int;
-    saldo -= Math.max(0, cap);
-    mesesNormal++;
-  }
-
-  // Simular con extra
-  saldo = deuda.monto;
-  let mesesExtra = 0, interesExtra = 0;
-  while (saldo > 0 && mesesExtra < 600) {
-    const int = saldo * tasaMensual;
-    const cap = Math.min(cuotaConExtra - int, saldo);
-    interesExtra += int;
-    saldo -= Math.max(0, cap);
-    mesesExtra++;
-  }
-
-  const ahorroIntereses = interesNormal - interesExtra;
-  const ahorroMeses = mesesNormal - mesesExtra;
-  const terminaNormal = new Date();
-  terminaNormal.setMonth(terminaNormal.getMonth() + mesesNormal);
-  const terminaExtra = new Date();
-  terminaExtra.setMonth(terminaExtra.getMonth() + mesesExtra);
-
-  res.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Sin pago extra</div>
-        <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--text)">${mesesNormal} meses</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">Termina: ${terminaNormal.toLocaleDateString('es-CO',{month:'short',year:'numeric'})}</div>
-        <div style="font-size:11px;color:var(--accent3);margin-top:2px">Intereses: ${cop(Math.round(interesNormal))}</div>
-      </div>
-      <div style="background:rgba(56,201,139,0.1);border:1px solid var(--accent2);border-radius:var(--radius-sm);padding:12px">
-        <div style="font-size:11px;color:var(--accent2);margin-bottom:4px">Con +${cop(extra)}/mes</div>
-        <div style="font-family:'DM Mono',monospace;font-size:15px;color:var(--accent2)">${mesesExtra} meses</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">Termina: ${terminaExtra.toLocaleDateString('es-CO',{month:'short',year:'numeric'})}</div>
-        <div style="font-size:11px;color:var(--accent2);margin-top:2px">Intereses: ${cop(Math.round(interesExtra))}</div>
-      </div>
-    </div>
-    ${ahorroIntereses > 0 ? `
-    <div style="background:rgba(56,201,139,0.08);border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:var(--text)">
-      💡 Pagarías <strong style="color:var(--accent2)">${ahorroMeses} meses menos</strong> y ahorrarías 
-      <strong style="color:var(--accent2)">${cop(Math.round(ahorroIntereses))}</strong> en intereses
-    </div>` : ''}
-  `;
-}
-
-function renderProyeccion(todasDeudas) {
-  destroyChart('proyeccion');
-  const ctx = document.getElementById('chart-proyeccion');
-  if (!ctx) return;
-
-  const maxMeses = 60;
-  const labels = Array.from({length: maxMeses}, (_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + i);
-    return d.toLocaleDateString('es-CO', {month:'short', year:'2-digit'});
-  });
-
-  const datasets = state.deudas.slice(0, 4).map((d, idx) => {
-    const colores = ['#4f8ef7','#f7724f','#38c98b','#f0c040'];
-    const tasaMensual = (d.tasa || 0) / 100 / 12;
-    const cuota = calcularCuotaDeuda(d);
-    let saldo = d.monto;
-    const data = [saldo];
-    for (let i = 1; i < maxMeses; i++) {
-      if (saldo <= 0) { data.push(0); continue; }
-      const int = saldo * tasaMensual;
-      const cap = Math.max(0, Math.min(cuota - int, saldo));
-      saldo = Math.max(0, saldo - cap);
-      data.push(Math.round(saldo));
-    }
-    return {
-      label: d.descripcion.slice(0, 25),
-      data,
-      borderColor: colores[idx],
-      backgroundColor: colores[idx] + '18',
-      fill: true,
-      tension: 0.3,
-      pointRadius: 0,
-      borderWidth: 2
-    };
-  });
-
-  charts.proyeccion = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      interaction: { intersect: false, mode: 'index' },
-      plugins: {
-        legend: { position: 'bottom', labels: { color: '#8a92a8', font: { size: 11 }, boxWidth: 10 } },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${Number(ctx.raw).toLocaleString('es-CO')}`
-          }
-        }
-      },
-      scales: {
-        x: { ticks: { color: '#5a6278', maxTicksLimit: 12 }, grid: { color: '#1e2433' } },
-        y: {
-          ticks: {
-            color: '#5a6278',
-            callback: v => v >= 1000000 ? (v/1000000).toFixed(0)+'M' : v >= 1000 ? (v/1000).toFixed(0)+'K' : v
-          },
-          grid: { color: '#1e2433' }
-        }
-      }
-    }
-  });
-}
-
-function mostrarEstrategia(tipo) {
-  estrategiaActual = tipo;
-  document.getElementById('btn-avalancha').className = tipo === 'avalancha' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
-  document.getElementById('btn-bola').className = tipo === 'bola' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
-
-  const div = document.getElementById('estrategia-resultado');
-  if (!div) return;
-
-  const deudas = [...state.deudas].filter(d => d.monto > 0);
-  if (!deudas.length) { div.innerHTML = '<p style="color:var(--text3);font-size:13px">No hay deudas registradas.</p>'; return; }
-
-  const ordenadas = tipo === 'avalancha'
-    ? [...deudas].sort((a, b) => (b.tasa || 0) - (a.tasa || 0))
-    : [...deudas].sort((a, b) => a.monto - b.monto);
-
-  const titulo = tipo === 'avalancha'
-    ? '🏔 Avalancha — paga primero la de mayor tasa de interés. Ahorras más dinero en total.'
-    : '⛄ Bola de nieve — paga primero la más pequeña. Ganarás motivación con victorias rápidas.';
-
-  div.innerHTML = `
-    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7">${titulo}</p>
-    ${ordenadas.map((d, i) => {
-      const tasaMensual = (d.tasa || 0) / 100 / 12;
-      const cuota = calcularCuotaDeuda(d);
-      const interes = calcularInteresMensual(d);
-      const restantes = d.cuotasTotales ? d.cuotasTotales - (d.cuotasPagadas || 0) : '?';
-      return `
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div style="min-width:28px;height:28px;border-radius:50%;background:${i===0?'var(--accent)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:${i===0?'#fff':'var(--text3)'}">
-            ${i + 1}
-          </div>
-          <div style="flex:1">
-            <div style="font-size:13px;color:var(--text);margin-bottom:3px;font-family:'DM Sans',sans-serif">${d.descripcion}</div>
-            <div style="display:flex;gap:12px;font-size:11px;color:var(--text3);flex-wrap:wrap">
-              <span>Saldo: <strong style="color:var(--accent3)">${cop(Math.round(d.monto))}</strong></span>
-              <span>Tasa: <strong style="color:var(--text2)">${d.tasa || 0}% EA</strong></span>
-              <span>Interés/mes: <strong style="color:var(--danger)">${cop(Math.round(interes))}</strong></span>
-              <span>Cuotas rest.: <strong style="color:var(--text2)">${restantes}</strong></span>
-            </div>
-          </div>
-          ${i === 0 ? `<span style="font-size:10px;background:rgba(79,142,247,0.15);color:var(--accent);padding:3px 8px;border-radius:20px;white-space:nowrap">Atacar primero</span>` : ''}
-        </div>`;
-    }).join('')}
-  `;
 }
 
 // ===== ANÁLISIS FINANCIERO =====
