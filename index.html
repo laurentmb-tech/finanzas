@@ -598,6 +598,7 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
       <div class="tabs" style="margin-bottom:16px">
         <button class="tab-btn active" onclick="switchTab('acciones')">Acciones</button>
         <button class="tab-btn" onclick="switchTab('fondos')">Fondos / Ahorros LP</button>
+        <button class="tab-btn" onclick="switchTab('activos-fijos')">🏠 Activos fijos</button>
       </div>
 
       <div id="tab-acciones">
@@ -628,6 +629,23 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
               <th>Nombre</th><th>Tipo</th><th>Saldo</th><th>Tasa %</th><th>Notas</th><th>Acciones</th>
             </tr></thead>
             <tbody id="tbody-fondos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-activos-fijos" style="display:none">
+        <div class="section-header" style="margin-bottom:12px">
+          <span style="font-size:13px;color:var(--text2)">Inmuebles, vehículos y otros bienes</span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-activo-fijo')">+ Agregar bien</button>
+        </div>
+        <div class="cards-grid" id="resumen-activos-fijos" style="margin-bottom:16px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Descripción</th><th>Tipo</th><th>Valor comercial</th>
+              <th>Deuda asociada</th><th>Valor neto</th><th>Acciones</th>
+            </tr></thead>
+            <tbody id="tbody-activos-fijos"></tbody>
           </table>
         </div>
       </div>
@@ -1018,6 +1036,43 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
   </div>
 </div>
 
+<!-- Modal Activo Fijo -->
+<div class="modal-overlay" id="modal-activo-fijo">
+  <div class="modal">
+    <h3 id="modal-activo-title">Nuevo activo fijo</h3>
+    <input type="hidden" id="af-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Descripción</label>
+        <input type="text" id="af-desc" placeholder="Ej: Apartamento Bogotá">
+      </div>
+      <div class="form-group"><label>Tipo</label>
+        <select id="af-tipo">
+          <option value="Inmueble">🏠 Inmueble</option>
+          <option value="Vehículo">🚗 Vehículo</option>
+          <option value="Equipo">💻 Equipo / tecnología</option>
+          <option value="Otro">📦 Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Valor comercial (avalúo)</label>
+        <input type="number" id="af-valor" placeholder="350000000">
+      </div>
+      <div class="form-group"><label>Deuda asociada (si aplica)</label>
+        <input type="number" id="af-deuda" placeholder="0" value="0">
+      </div>
+      <div class="form-group"><label>Año de adquisición</label>
+        <input type="number" id="af-anio" placeholder="2023">
+      </div>
+      <div class="form-group"><label>Notas</label>
+        <input type="text" id="af-notas" placeholder="Ej: Cra 58C 134A 51">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-activo-fijo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarActivoFijo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Pago Pendiente -->
 <div class="modal-overlay" id="modal-pago">
   <div class="modal">
@@ -1195,7 +1250,8 @@ function cargarEstado() {
       const parsed = JSON.parse(data);
       state = { ...state, ...parsed };
       if (!state.presupuesto) state.presupuesto = {};
-      if (!state.patrimonio) state.patrimonio = { acciones: [], fondos: [] };
+      if (!state.patrimonio) state.patrimonio = { acciones: [], fondos: [], activosFijos: [] };
+      if (!state.patrimonio.activosFijos) state.patrimonio.activosFijos = [];
       if (!state.tarjetas) state.tarjetas = [];
     } catch(e) {}
   }
@@ -1795,22 +1851,44 @@ function renderPatrimonioCards() {
     totalAcciones += a.precioActual ? a.cantidad*a.precioActual : a.cantidad*a.precioCompra;
   });
   const totalFondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
-  const totalActivos = totalCuentas+totalAcciones+totalFondos;
+  const activosFijos = state.patrimonio.activosFijos || [];
+  const totalActivosFijos = activosFijos.reduce((s,a)=>s+a.valor,0);
+  const totalActivos = totalCuentas+totalAcciones+totalFondos+totalActivosFijos;
   const totalDeudas = state.deudas.reduce((s,d)=>s+(d.monto||0),0)+state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
   const neto = totalActivos-totalDeudas;
 
   div.innerHTML = `
-    <div class="card green"><div class="card-label">Activos totales</div><div class="card-value">${cop(totalActivos)}</div><div class="card-sub">Cuentas + Acciones + Fondos</div></div>
-    <div class="card red"><div class="card-label">Pasivos totales</div><div class="card-value negative">${cop(totalDeudas)}</div><div class="card-sub">Deudas + Tarjetas</div></div>
-    <div class="card ${neto>=0?'green':'red'}"><div class="card-label">Patrimonio neto</div><div class="card-value ${neto>=0?'positive':'negative'}">${cop(neto)}</div></div>
+    <div class="card green">
+      <div class="card-label">Activos totales</div>
+      <div class="card-value">${cop(totalActivos)}</div>
+      <div class="card-sub">Cuentas + Inversiones + Bienes</div>
+    </div>
+    <div class="card blue">
+      <div class="card-label">Activos fijos</div>
+      <div class="card-value">${cop(totalActivosFijos)}</div>
+      <div class="card-sub">${activosFijos.length} bien(es) registrado(s)</div>
+    </div>
+    <div class="card red">
+      <div class="card-label">Pasivos totales</div>
+      <div class="card-value negative">${cop(totalDeudas)}</div>
+      <div class="card-sub">Deudas + Tarjetas</div>
+    </div>
+    <div class="card ${neto>=0?'green':'red'}">
+      <div class="card-label">Patrimonio neto</div>
+      <div class="card-value ${neto>=0?'positive':'negative'}">${cop(neto)}</div>
+      <div class="card-sub">Activos menos pasivos</div>
+    </div>
   `;
 }
 
 function switchTab(tab) {
   document.getElementById('tab-acciones').style.display = tab==='acciones'?'block':'none';
   document.getElementById('tab-fondos').style.display = tab==='fondos'?'block':'none';
+  document.getElementById('tab-activos-fijos').style.display = tab==='activos-fijos'?'block':'none';
+  if (tab==='activos-fijos') renderActivosFijos();
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
-    b.classList.toggle('active', (i===0&&tab==='acciones')||(i===1&&tab==='fondos'));
+    b.classList.toggle('active',
+      (i===0&&tab==='acciones')||(i===1&&tab==='fondos')||(i===2&&tab==='activos-fijos'));
   });
 }
 
@@ -2636,7 +2714,11 @@ const DATOS_INICIALES = {
   patrimonio: {
     acciones: [],
     fondos: [{ id:6001, nombre:"Fondo de Empleados Konrad Lorenz", tipo:"Fondo empleados", saldo:51060919, tasa:0,
-               notas:"Aportes ordinarios $30.276.174 + Revalorización $4.873.979 + Ahorro permanente $13.754.073 + Int. ahorro permanente $2.156.693" }]
+               notas:"Aportes ordinarios $30.276.174 + Revalorización $4.873.979 + Ahorro permanente $13.754.073 + Int. ahorro permanente $2.156.693" }],
+    activosFijos: [
+      { id:7001, descripcion:"Apartamento Bogotá", tipo:"Inmueble", valor:350000000, deuda:187590934, anio:"2023", notas:"KREDIVIVIENDA Fondo Empleados Konrad" },
+      { id:7002, descripcion:"Vehículo", tipo:"Vehículo", valor:25000000, deuda:0, anio:"", notas:"" }
+    ]
   },
   cuentas: { nequi:0, nequiNegocios:0, daviplata:0, bancolombia:0, davivienda:0, paypal:0 },
   presupuesto: { "Alimentación":0,"Transporte":0,"Salud":0,"Vivienda":0,"Educación":0,"Ocio":0,"Servicios":0,"Ropa":0,"Deudas/Cuotas":0,"Ahorro":0,"Otro":0 },
@@ -2644,6 +2726,97 @@ const DATOS_INICIALES = {
   pagosPendientes: [],
   meta: { version:"9.1", creadoEn:"2026-04-16", ultimaActualizacion:"2026-04-16" }
 };
+
+// ===== ACTIVOS FIJOS =====
+function guardarActivoFijo() {
+  const desc  = document.getElementById('af-desc').value.trim();
+  const tipo  = document.getElementById('af-tipo').value;
+  const valor = Number(document.getElementById('af-valor').value)||0;
+  const deuda = Number(document.getElementById('af-deuda').value)||0;
+  const anio  = document.getElementById('af-anio').value||'';
+  const notas = document.getElementById('af-notas').value.trim();
+  const editId = document.getElementById('af-edit-id').value;
+  if (!desc||!valor) { toast('Completa descripción y valor','error'); return; }
+
+  if (!state.patrimonio.activosFijos) state.patrimonio.activosFijos = [];
+  if (editId) {
+    const a = state.patrimonio.activosFijos.find(x=>x.id==editId);
+    if (a) Object.assign(a, {descripcion:desc,tipo,valor,deuda,anio,notas});
+  } else {
+    state.patrimonio.activosFijos.push({id:uid(),descripcion:desc,tipo,valor,deuda,anio,notas});
+  }
+  closeModal('modal-activo-fijo');
+  document.getElementById('af-edit-id').value='';
+  saveAndRefresh();
+  renderActivosFijos();
+  renderPatrimonioCards();
+  toast('Activo guardado');
+}
+
+function editarActivoFijo(id) {
+  if (!state.patrimonio.activosFijos) return;
+  const a = state.patrimonio.activosFijos.find(x=>x.id===id);
+  if (!a) return;
+  document.getElementById('modal-activo-title').textContent = 'Editar activo fijo';
+  document.getElementById('af-edit-id').value = id;
+  document.getElementById('af-desc').value  = a.descripcion;
+  document.getElementById('af-tipo').value  = a.tipo;
+  document.getElementById('af-valor').value = a.valor;
+  document.getElementById('af-deuda').value = a.deuda||0;
+  document.getElementById('af-anio').value  = a.anio||'';
+  document.getElementById('af-notas').value = a.notas||'';
+  openModal('modal-activo-fijo');
+}
+
+function borrarActivoFijo(id) {
+  if (!state.patrimonio.activosFijos) return;
+  state.patrimonio.activosFijos = state.patrimonio.activosFijos.filter(x=>x.id!==id);
+  saveAndRefresh(); renderActivosFijos(); renderPatrimonioCards(); toast('Activo eliminado');
+}
+
+function renderActivosFijos() {
+  if (!state.patrimonio.activosFijos) state.patrimonio.activosFijos = [];
+  const lista = state.patrimonio.activosFijos;
+  const tb = document.getElementById('tbody-activos-fijos');
+  const res = document.getElementById('resumen-activos-fijos');
+
+  const totalValor = lista.reduce((s,a)=>s+a.valor,0);
+  const totalDeuda = lista.reduce((s,a)=>s+(a.deuda||0),0);
+  const totalNeto  = totalValor - totalDeuda;
+
+  if (res) res.innerHTML = `
+    <div class="card green"><div class="card-label">Valor comercial total</div>
+      <div class="card-value positive">${cop(totalValor)}</div>
+      <div class="card-sub">${lista.length} bien(es)</div></div>
+    <div class="card red"><div class="card-label">Deudas asociadas</div>
+      <div class="card-value negative">${cop(totalDeuda)}</div></div>
+    <div class="card blue"><div class="card-label">Valor neto</div>
+      <div class="card-value">${cop(totalNeto)}</div>
+      <div class="card-sub">Avalúo menos deuda</div></div>
+  `;
+
+  if (!tb) return;
+  if (!lista.length) {
+    tb.innerHTML='<tr><td colspan="6" class="empty-state"><div class="icon">🏠</div>Sin activos fijos registrados</td></tr>';
+    return;
+  }
+  const iconos = { Inmueble:'🏠', Vehículo:'🚗', Equipo:'💻', Otro:'📦' };
+  tb.innerHTML = lista.map(a=>`<tr>
+    <td class="name-col">
+      ${a.descripcion}
+      ${a.notas?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${a.notas}</div>`:''}
+      ${a.anio?`<div style="font-size:11px;color:var(--text3)">Adq. ${a.anio}</div>`:''}
+    </td>
+    <td><span class="badge badge-blue">${iconos[a.tipo]||'📦'} ${a.tipo}</span></td>
+    <td style="color:var(--accent2);font-family:'DM Mono',monospace">${cop(a.valor)}</td>
+    <td style="color:${a.deuda>0?'var(--accent3)':'var(--text3)'};font-family:'DM Mono',monospace">${a.deuda>0?cop(a.deuda):'—'}</td>
+    <td style="color:var(--accent);font-family:'DM Mono',monospace;font-weight:500">${cop(a.valor-(a.deuda||0))}</td>
+    <td class="action-col">
+      <button class="btn btn-edit" onclick="editarActivoFijo(${a.id})">✏</button>
+      <button class="btn btn-danger" onclick="borrarActivoFijo(${a.id})">✕</button>
+    </td>
+  </tr>`).join('');
+}
 
 // ===== CONTABILIDAD =====
 function inicializarSelectorMes() {
@@ -2715,7 +2888,9 @@ function renderContabilidad() {
   let valorAcciones = 0;
   state.patrimonio.acciones.forEach(a=>{ valorAcciones += (a.precioActual||a.precioCompra)*a.cantidad; });
   const fondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
-  const totalActivos = efectivo + valorAcciones + fondos;
+  const activosFijos = state.patrimonio.activosFijos || [];
+  const totalActivosFijos = activosFijos.reduce((s,a)=>s+a.valor,0);
+  const totalActivos = efectivo + valorAcciones + fondos + totalActivosFijos;
 
   const saldoTarjetas = state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
   const totalDeudas = state.deudas.reduce((s,d)=>s+(d.monto||0),0);
@@ -2743,6 +2918,11 @@ function renderContabilidad() {
         ${fondos>0?`<div class="cont-grupo">
           <div class="cont-grupo-title">Ahorros largo plazo</div>
           ${state.patrimonio.fondos.map(f=>lineaContable(f.nombre, f.saldo)).join('')}
+        </div>`:''}
+        ${totalActivosFijos>0?`<div class="cont-grupo">
+          <div class="cont-grupo-title">Activos fijos</div>
+          ${activosFijos.map(a=>lineaContable(`${a.tipo === 'Inmueble'?'🏠':a.tipo==='Vehículo'?'🚗':'📦'} ${a.descripcion}`, a.valor)).join('')}
+          ${lineaContable('Subtotal bienes', totalActivosFijos, 'subtotal')}
         </div>`:''}
         ${lineaContable('TOTAL ACTIVOS', totalActivos, 'total positivo')}
       </div>
