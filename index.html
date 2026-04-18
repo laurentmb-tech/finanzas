@@ -374,7 +374,33 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
 .cc-dias span { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; display: block; }
 .cc-pago { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent2); }
 
-/* BOTÓN FLOTANTE GUARDAR */
+/* CONTABILIDAD */
+.cont-linea {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+}
+.cont-linea:last-child { border-bottom: none; }
+.cont-linea.subtotal { font-weight: 600; color: var(--text); background: var(--bg3); padding: 8px 10px; border-radius: 6px; margin: 4px 0; border: none; }
+.cont-linea.total { font-weight: 600; font-size: 14px; color: var(--text); border-top: 2px solid var(--border); padding-top: 10px; margin-top: 6px; border-bottom: none; }
+.cont-linea.positivo .cont-val { color: var(--accent2); }
+.cont-linea.negativo .cont-val { color: var(--accent3); }
+.cont-label { color: var(--text2); }
+.cont-val { font-family: 'DM Mono', monospace; font-weight: 500; }
+.cont-grupo { margin-bottom: 16px; }
+.cont-grupo-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.cont-col2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.semaforo-card { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); }
+.semaforo-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+@media print {
+  .sidebar, .topbar, .fab-guardar, .toast, nav { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .section { display: block !important; }
+  body { background: white !important; color: black !important; }
+  .form-card { border: 1px solid #ddd !important; background: white !important; break-inside: avoid; }
+  .cont-label, .cont-val { color: black !important; }
+  .cont-linea { border-color: #ddd !important; }
+}
 .fab-guardar {
   position: fixed; bottom: 24px; right: 24px; z-index: 500;
   display: flex; align-items: center; gap: 8px;
@@ -423,12 +449,8 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
     <button class="nav-btn" onclick="showSection('tarjetas')"><span class="icon">💳</span> Tarjetas</button>
     <button class="nav-btn" onclick="showSection('deudas')"><span class="icon">📋</span> Deudas</button>
     <button class="nav-btn" onclick="showSection('patrimonio')"><span class="icon">📈</span> Patrimonio</button>
-    <button class="nav-btn" onclick="showSection('analisis')"><span class="icon">🔬</span> Análisis</button>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-label">Análisis</div>
     <button class="nav-btn" onclick="showSection('analisis')"><span class="icon">📊</span> Análisis deuda</button>
+    <button class="nav-btn" onclick="showSection('contabilidad')"><span class="icon">🧾</span> Contabilidad</button>
   </div>
 
   <div class="nav-group">
@@ -702,6 +724,61 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
           </tr></thead>
           <tbody id="tbody-pagos"></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- CONTABILIDAD -->
+    <section id="sec-contabilidad" class="section">
+      <div class="section-header">
+        <h2>🧾 Estados financieros</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="cont-mes" onchange="renderContabilidad()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:8px;font-family:inherit;font-size:13px"></select>
+          <button class="btn btn-outline btn-sm" onclick="imprimirEstados()">🖨 Imprimir / PDF</button>
+        </div>
+      </div>
+
+      <!-- Semáforo salud financiera -->
+      <div id="cont-semaforo" style="margin-bottom:20px"></div>
+
+      <!-- Los tres estados -->
+      <div id="estados-container">
+
+        <!-- 1. Estado de Resultados -->
+        <div class="form-card" style="margin-bottom:20px" id="card-resultados">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div>
+              <h3 style="font-size:15px;font-weight:600">Estado de Resultados</h3>
+              <p style="font-size:12px;color:var(--text3);margin-top:2px" id="cont-periodo-label"></p>
+            </div>
+            <span class="badge badge-blue">P&L</span>
+          </div>
+          <div id="estado-resultados"></div>
+        </div>
+
+        <!-- 2. Balance General -->
+        <div class="form-card" style="margin-bottom:20px" id="card-balance">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div>
+              <h3 style="font-size:15px;font-weight:600">Balance General</h3>
+              <p style="font-size:12px;color:var(--text3);margin-top:2px">Foto de activos, pasivos y patrimonio</p>
+            </div>
+            <span class="badge badge-green">Balance</span>
+          </div>
+          <div id="estado-balance"></div>
+        </div>
+
+        <!-- 3. Flujo de Caja -->
+        <div class="form-card" id="card-flujo">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div>
+              <h3 style="font-size:15px;font-weight:600">Flujo de Caja</h3>
+              <p style="font-size:12px;color:var(--text3);margin-top:2px">Movimientos de efectivo del período</p>
+            </div>
+            <span class="badge badge-yellow">Cash Flow</span>
+          </div>
+          <div id="estado-flujo"></div>
+        </div>
+
       </div>
     </section>
 
@@ -1143,7 +1220,8 @@ const sectionTitles = {
   presupuesto: 'Presupuesto', tarjetas: 'Tarjetas de crédito',
   deudas: 'Deudas', patrimonio: 'Patrimonio', konrad: 'Nómina Konrad',
   cuentas: 'Cuentas bancarias', cierres: '📸 Fotografía financiera mensual',
-  pagos: '🔔 Cuentas por pagar', analisis: '📊 Análisis de deuda y proyección', analisis: '🔬 Análisis financiero'
+  pagos: '🔔 Cuentas por pagar', analisis: '📊 Análisis de deuda y proyección',
+  contabilidad: '🧾 Estados financieros', analisis: '🔬 Análisis financiero'
 };
 
 function showSection(id) {
@@ -1161,6 +1239,7 @@ function showSection(id) {
   if (id === 'patrimonio') { renderAcciones(); renderFondos(); renderPatrimonioCards(); }
   if (id === 'tarjetas') renderTarjetas();
   if (id === 'analisis') renderAnalisis();
+  if (id === 'contabilidad') renderContabilidad();
   if (id === 'cierres') renderCierres();
   if (id === 'pagos') renderPagos();
   if (id === 'cuentas') renderCuentas();
@@ -2565,6 +2644,219 @@ const DATOS_INICIALES = {
   pagosPendientes: [],
   meta: { version:"9.1", creadoEn:"2026-04-16", ultimaActualizacion:"2026-04-16" }
 };
+
+// ===== CONTABILIDAD =====
+function inicializarSelectorMes() {
+  const sel = document.getElementById('cont-mes');
+  if (!sel) return;
+  const meses = Array.from(new Set([
+    ...state.ingresos.map(i=>i.fecha?.slice(0,7)),
+    ...state.gastos.map(g=>g.fecha?.slice(0,7))
+  ].filter(Boolean))).sort().reverse();
+  if (!meses.includes(mesActual())) meses.unshift(mesActual());
+  sel.innerHTML = meses.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+function contCOP(n) {
+  const v = Number(n||0);
+  return (v<0?'-':'') + '$ ' + Math.abs(v).toLocaleString('es-CO');
+}
+
+function lineaContable(label, valor, tipo='') {
+  const cls = valor>0?'positivo':valor<0?'negativo':'';
+  return `<div class="cont-linea ${cls} ${tipo}">
+    <span class="cont-label">${label}</span>
+    <span class="cont-val">${contCOP(valor)}</span>
+  </div>`;
+}
+
+function renderContabilidad() {
+  inicializarSelectorMes();
+  const sel = document.getElementById('cont-mes');
+  const mes = sel?.value || mesActual();
+  const mesLabel = new Date(mes+'-15').toLocaleDateString('es-CO',{year:'numeric',month:'long'});
+
+  document.getElementById('cont-periodo-label').textContent = `Período: ${mesLabel}`;
+
+  const ingMes   = state.ingresos.filter(i=>i.fecha?.startsWith(mes));
+  const gasMes   = state.gastos.filter(g=>g.fecha?.startsWith(mes));
+
+  // ── 1. ESTADO DE RESULTADOS ──────────────────────────────
+  const ingPorCat = {};
+  ingMes.forEach(i=>{ ingPorCat[i.categoria||'Otros'] = (ingPorCat[i.categoria||'Otros']||0)+i.monto; });
+  const gasPorCat = {};
+  gasMes.forEach(g=>{ gasPorCat[g.categoria||'Otros'] = (gasPorCat[g.categoria||'Otros']||0)+g.monto; });
+
+  const totalIng = ingMes.reduce((s,i)=>s+i.monto,0);
+  const totalGas = gasMes.reduce((s,g)=>s+g.monto,0);
+  const utilidad = totalIng - totalGas;
+
+  const erDiv = document.getElementById('estado-resultados');
+  if (erDiv) erDiv.innerHTML = `
+    <div class="cont-grupo">
+      <div class="cont-grupo-title">Ingresos</div>
+      ${Object.entries(ingPorCat).map(([k,v])=>lineaContable(k,v)).join('')}
+      ${lineaContable('Total ingresos', totalIng, 'subtotal positivo')}
+    </div>
+    <div class="cont-grupo">
+      <div class="cont-grupo-title">Gastos y egresos</div>
+      ${Object.entries(gasPorCat).map(([k,v])=>lineaContable(k,-v)).join('')}
+      ${lineaContable('Total gastos', -totalGas, 'subtotal negativo')}
+    </div>
+    <div class="cont-linea total ${utilidad>=0?'positivo':'negativo'}">
+      <span class="cont-label" style="font-weight:700">${utilidad>=0?'UTILIDAD NETA':'PÉRDIDA NETA'}</span>
+      <span class="cont-val" style="font-size:15px">${contCOP(utilidad)}</span>
+    </div>
+  `;
+
+  // ── 2. BALANCE GENERAL ──────────────────────────────────
+  const c = state.cuentas;
+  const efectivo = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal;
+  let valorAcciones = 0;
+  state.patrimonio.acciones.forEach(a=>{ valorAcciones += (a.precioActual||a.precioCompra)*a.cantidad; });
+  const fondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
+  const totalActivos = efectivo + valorAcciones + fondos;
+
+  const saldoTarjetas = state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
+  const totalDeudas = state.deudas.reduce((s,d)=>s+(d.monto||0),0);
+  const totalPasivos = saldoTarjetas + totalDeudas;
+  const patrimonioNeto = totalActivos - totalPasivos;
+
+  const balDiv = document.getElementById('estado-balance');
+  if (balDiv) balDiv.innerHTML = `
+    <div class="cont-col2">
+      <div>
+        <div class="cont-grupo">
+          <div class="cont-grupo-title">Activos corrientes</div>
+          ${c.nequi?lineaContable('Nequi', c.nequi):''}
+          ${c.nequiNegocios?lineaContable('Nequi Negocios', c.nequiNegocios):''}
+          ${c.daviplata?lineaContable('Daviplata', c.daviplata):''}
+          ${c.bancolombia?lineaContable('Bancolombia', c.bancolombia):''}
+          ${c.davivienda?lineaContable('Davivienda', c.davivienda):''}
+          ${c.paypal?lineaContable('PayPal', c.paypal):''}
+          ${lineaContable('Subtotal efectivo', efectivo, 'subtotal')}
+        </div>
+        ${valorAcciones>0?`<div class="cont-grupo">
+          <div class="cont-grupo-title">Inversiones</div>
+          ${lineaContable('Portafolio acciones', valorAcciones)}
+        </div>`:''}
+        ${fondos>0?`<div class="cont-grupo">
+          <div class="cont-grupo-title">Ahorros largo plazo</div>
+          ${state.patrimonio.fondos.map(f=>lineaContable(f.nombre, f.saldo)).join('')}
+        </div>`:''}
+        ${lineaContable('TOTAL ACTIVOS', totalActivos, 'total positivo')}
+      </div>
+      <div>
+        <div class="cont-grupo">
+          <div class="cont-grupo-title">Pasivos corrientes</div>
+          ${state.tarjetas.filter(t=>t.saldo>0).map(t=>lineaContable(`${t.nombre} *${t.digitos}`, -t.saldo)).join('')}
+          ${lineaContable('Subtotal tarjetas', -saldoTarjetas, 'subtotal negativo')}
+        </div>
+        <div class="cont-grupo">
+          <div class="cont-grupo-title">Pasivos largo plazo</div>
+          ${state.deudas.map(d=>lineaContable(d.descripcion.slice(0,35), -d.monto)).join('')}
+          ${lineaContable('Subtotal créditos', -totalDeudas, 'subtotal negativo')}
+        </div>
+        ${lineaContable('TOTAL PASIVOS', -totalPasivos, 'total negativo')}
+        <div style="height:12px"></div>
+        ${lineaContable('PATRIMONIO NETO', patrimonioNeto, 'total '+(patrimonioNeto>=0?'positivo':'negativo'))}
+      </div>
+    </div>
+    <div class="cont-linea" style="margin-top:12px;font-size:12px;color:var(--text3);border:none">
+      ✓ Ecuación contable: Activos (${contCOP(totalActivos)}) = Pasivos (${contCOP(totalPasivos)}) + Patrimonio (${contCOP(patrimonioNeto)})
+    </div>
+  `;
+
+  // ── 3. FLUJO DE CAJA ─────────────────────────────────────
+  const cuentasNombres = ['Nequi','Nequi Negocios','Daviplata','Bancolombia','Davivienda','PayPal','Efectivo'];
+  const entradas = {}; const salidas = {};
+  cuentasNombres.forEach(cn=>{ entradas[cn]=0; salidas[cn]=0; });
+
+  ingMes.forEach(i=>{ if(entradas[i.cuenta]!==undefined) entradas[i.cuenta]+=i.monto; });
+  gasMes.forEach(g=>{ if(salidas[g.cuenta]!==undefined) salidas[g.cuenta]+=g.monto; });
+
+  const totalEntradas = Object.values(entradas).reduce((a,b)=>a+b,0);
+  const totalSalidas  = Object.values(salidas).reduce((a,b)=>a+b,0);
+  const flujoNeto = totalEntradas - totalSalidas;
+
+  const flujoDiv = document.getElementById('estado-flujo');
+  if (flujoDiv) flujoDiv.innerHTML = `
+    <div class="cont-col2">
+      <div>
+        <div class="cont-grupo">
+          <div class="cont-grupo-title">Entradas de efectivo</div>
+          ${cuentasNombres.filter(cn=>entradas[cn]>0).map(cn=>lineaContable(cn,entradas[cn])).join('')}
+          ${lineaContable('Total entradas', totalEntradas, 'subtotal positivo')}
+        </div>
+      </div>
+      <div>
+        <div class="cont-grupo">
+          <div class="cont-grupo-title">Salidas de efectivo</div>
+          ${cuentasNombres.filter(cn=>salidas[cn]>0).map(cn=>lineaContable(cn,-salidas[cn])).join('')}
+          ${lineaContable('Total salidas', -totalSalidas, 'subtotal negativo')}
+        </div>
+      </div>
+    </div>
+    ${lineaContable('FLUJO NETO DEL PERÍODO', flujoNeto, 'total '+(flujoNeto>=0?'positivo':'negativo'))}
+    <div style="margin-top:10px;padding:10px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2)">
+      💡 Saldo en cuentas bancarias hoy: <strong style="color:var(--text);font-family:'DM Mono',monospace">${contCOP(efectivo)}</strong>
+    </div>
+  `;
+
+  // ── SEMÁFORO SALUD FINANCIERA ─────────────────────────────
+  const pctEndeud = totalIng>0 ? (totalGas/totalIng*100) : 0;
+  const indicadores = [
+    {
+      label: 'Ratio gastos/ingresos',
+      valor: pctEndeud.toFixed(1)+'%',
+      color: pctEndeud>90?'var(--danger)':pctEndeud>70?'var(--warning)':'var(--accent2)',
+      estado: pctEndeud>90?'Crítico':pctEndeud>70?'Elevado':'Saludable',
+      desc: `Gastos = ${pctEndeud.toFixed(0)}% de ingresos (recomendado <70%)`
+    },
+    {
+      label: 'Ahorro del período',
+      valor: contCOP(utilidad),
+      color: utilidad>0?'var(--accent2)':utilidad===0?'var(--warning)':'var(--danger)',
+      estado: utilidad>0?'Positivo':utilidad===0?'Neutro':'Negativo',
+      desc: utilidad>0?'Generaste ahorro este mes':'Gastaste más de lo que ingresaste'
+    },
+    {
+      label: 'Patrimonio neto',
+      valor: contCOP(patrimonioNeto),
+      color: patrimonioNeto>0?'var(--accent2)':'var(--danger)',
+      estado: patrimonioNeto>0?'Positivo':'Negativo',
+      desc: 'Activos totales menos pasivos totales'
+    }
+  ];
+
+  const semDiv = document.getElementById('cont-semaforo');
+  if (semDiv) semDiv.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+      ${indicadores.map(ind=>`
+        <div class="semaforo-card">
+          <div class="semaforo-dot" style="background:${ind.color}"></div>
+          <div>
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px">${ind.label}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:${ind.color};margin:2px 0">${ind.valor}</div>
+            <div style="font-size:11px;color:var(--text3)">${ind.desc}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+function imprimirEstados() {
+  // Ocultar todas las secciones excepto contabilidad para imprimir
+  document.querySelectorAll('.section').forEach(s=>{
+    if (s.id!=='sec-contabilidad') s.style.display='none';
+    else s.style.display='block';
+  });
+  window.print();
+  // Restaurar
+  setTimeout(()=>{
+    document.querySelectorAll('.section').forEach(s=>{ s.style.display=''; });
+  }, 500);
+}
 
 // ===== BOTÓN GUARDAR FLOTANTE =====
 function actualizarFab(estado) {
