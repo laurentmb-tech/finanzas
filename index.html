@@ -1995,7 +1995,8 @@ function calcularTotales() {
     totalAcciones += a.precioActual?a.cantidad*a.precioActual:a.cantidad*a.precioCompra;
   });
   const totalFondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
-  const totalActivos = totalCuentas+totalAcciones+totalFondos;
+  const totalActivosFijos = (state.patrimonio.activosFijos||[]).reduce((s,a)=>s+a.valor,0);
+  const totalActivos = totalCuentas+totalAcciones+totalFondos+totalActivosFijos;
   const totalDeudas = state.deudas.reduce((s,d)=>s+(d.monto||0),0)+state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
   const saldo = totalIngresos-totalGastos;
   return {totalIngresos,totalGastos,saldo,totalActivos,totalDeudas,neto:totalActivos-totalDeudas};
@@ -2211,11 +2212,12 @@ function ejecutarCierreMensual() {
     totalAcciones += (a.precioActual||a.precioCompra)*a.cantidad;
   });
   const totalFondos  = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
+  const totalActivosFijosC = (state.patrimonio.activosFijos||[]).reduce((s,a)=>s+a.valor,0);
   const totalDeudas  = state.deudas.reduce((s,d)=>s+(d.monto||0),0)
                      + state.tarjetas.reduce((s,t)=>s+(t.saldo||0),0);
   const ingMes = state.ingresos.filter(i=>i.fecha&&i.fecha.startsWith(mes)).reduce((s,i)=>s+i.monto,0);
   const gasMes = state.gastos.filter(g=>g.fecha&&g.fecha.startsWith(mes)).reduce((s,g)=>s+g.monto,0);
-  const activos = totalCuentas+totalAcciones+totalFondos;
+  const activos = totalCuentas+totalAcciones+totalFondos+totalActivosFijosC;
   state.cierresMensuales.push({
     mes, fechaCierre: new Date().toISOString(),
     ingresos:ingMes, gastos:gasMes, flujo:ingMes-gasMes,
