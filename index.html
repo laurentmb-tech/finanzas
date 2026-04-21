@@ -609,8 +609,11 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
 
       <div id="tab-acciones">
         <div class="section-header" style="margin-bottom:12px">
-          <span style="font-size:13px;color:var(--text2)">Portafolio de acciones</span>
-          <button class="btn btn-primary btn-sm" onclick="openModal('modal-accion')">+ Agregar acción</button>
+          <span style="font-size:13px;color:var(--text2)">Portafolio de acciones BVC</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="actualizarTodosLosPrecios()">↻ Actualizar precios</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-accion')">+ Agregar acción</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -1401,6 +1404,7 @@ function ajustarCuenta(cuenta, delta) {
   else if (cuenta==='Bancolombia') c.bancolombia+=delta;
   else if (cuenta==='Davivienda') c.davivienda+=delta;
   else if (cuenta==='PayPal') c.paypal+=delta;
+  else if (cuenta==='Efectivo') c.efectivo=(c.efectivo||0)+delta;
   else if (cuenta && cuenta.startsWith('TC ')) {
     // Gasto con tarjeta: aumenta el saldo de la tarjeta (delta negativo = más deuda)
     const digitos = cuenta.split('*')[1];
@@ -1796,18 +1800,76 @@ function borrarAccion(id) {
   saveAndRefresh(); renderAcciones(); renderPatrimonioCards(); toast('Acción eliminada');
 }
 
+// Mapeo de símbolos BVC a Yahoo Finance
+const BVC_TICKERS = {
+  'ECOPETROL': 'ECOPETROL.CL',
+  'ECOPETL':   'ECOPETROL.CL',
+  'GRUPOSURA': 'GRUPOSURA.CL',
+  'PFGRUPSURA':'PFGRUPSURA.CL',
+  'ICOLCAP':   'ICOLCAP.CL',
+  'PFCIBEST':  'PFCIBEST.CL',
+  'CELSIA':    'CELSIA.CL',
+  'ISA':       'ISA.CL',
+  'NUTRESA':   'NUTRESA.CL',
+  'BANCOLOMBIA':'BCOLO.CL',
+  'PFTABVMR':  'PFTABVMR.CL',
+};
+
+async function obtenerPrecioBVC(simbolo) {
+  // Intentar Yahoo Finance vía proxy público
+  const ticker = BVC_TICKERS[simbolo.toUpperCase()] || (simbolo + '.CL');
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+    const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error('Yahoo no responde');
+    const data = await r.json();
+    const precio = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (precio) return precio;
+    throw new Error('Sin precio');
+  } catch(e) {
+    // Fallback: Finnhub para acciones internacionales
+    const r2 = await fetch(`https://finnhub.io/api/v1/quote?symbol=${simbolo}&token=${FINNHUB_API_KEY}`);
+    const d = await r2.json();
+    if (d.c) return d.c;
+    throw new Error('Sin precio en ninguna fuente');
+  }
+}
+
 async function actualizarPrecioAccion(id) {
   const a = state.patrimonio.acciones.find(x=>x.id===id);
   if (!a) return;
+  const btn = document.querySelector(`button[onclick="actualizarPrecioAccion(${id})"]`);
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
   try {
-    toast('Consultando Finnhub...','');
-    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${a.simbolo}&token=${FINNHUB_API_KEY}`);
-    const d = await r.json();
-    if (!d.c) { toast('No se encontró precio','error'); return; }
-    a.precioActual = d.c;
+    toast(`Consultando precio de ${a.simbolo}…`);
+    const precio = await obtenerPrecioBVC(a.simbolo);
+    a.precioActual = precio;
+    a.ultimaActualizacion = new Date().toISOString().slice(0,10);
     saveAndRefresh(); renderAcciones(); renderPatrimonioCards();
-    toast(`${a.simbolo}: ${d.c}`);
-  } catch(e) { toast('Error al consultar precio','error'); }
+    toast(`✅ ${a.simbolo}: $${cop(precio)}`);
+  } catch(e) {
+    toast(`No se pudo obtener precio de ${a.simbolo}`, 'error');
+  } finally {
+    if (btn) { btn.textContent = '↻'; btn.disabled = false; }
+  }
+}
+
+async function actualizarTodosLosPrecios() {
+  const acciones = state.patrimonio.acciones;
+  if (!acciones.length) { toast('Sin acciones registradas','error'); return; }
+  toast(`Actualizando ${acciones.length} acciones…`);
+  let ok = 0;
+  for (const a of acciones) {
+    try {
+      const precio = await obtenerPrecioBVC(a.simbolo);
+      a.precioActual = precio;
+      a.ultimaActualizacion = new Date().toISOString().slice(0,10);
+      ok++;
+    } catch(e) { console.error(a.simbolo, e); }
+    await new Promise(r => setTimeout(r, 500)); // pausa entre requests
+  }
+  saveAndRefresh(); renderAcciones(); renderPatrimonioCards();
+  toast(`✅ ${ok}/${acciones.length} precios actualizados`);
 }
 
 function renderAcciones() {
@@ -1824,7 +1886,7 @@ function renderAcciones() {
       <td class="name-col">${a.nombre||'—'}</td>
       <td>${a.cantidad}</td>
       <td>${cop(a.precioCompra)}</td>
-      <td>${a.precioActual?cop(a.precioActual):'—'}</td>
+      <td>${a.precioActual?`${cop(a.precioActual)}<div style="font-size:10px;color:var(--text3)">${a.ultimaActualizacion||''}</div>`:'—'}</td>
       <td>${cop(inv)}</td>
       <td>${val?cop(val):'—'}</td>
       <td>${cop(a.dividendosAcum||0)}</td>
@@ -1899,7 +1961,7 @@ function renderPatrimonioCards() {
   const div = document.getElementById('patrimonio-cards');
   if (!div) return;
   const c = state.cuentas;
-  const totalCuentas = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal;
+  const totalCuentas = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal+(c.efectivo||0);
   let totalAcciones=0;
   state.patrimonio.acciones.forEach(a=>{
     totalAcciones += a.precioActual ? a.cantidad*a.precioActual : a.cantidad*a.precioCompra;
@@ -2010,7 +2072,8 @@ function renderCuentas() {
   const campos = [
     ['nequi','Nequi'],['nequiNegocios','Nequi Negocios'],
     ['daviplata','Daviplata'],['bancolombia','Bancolombia'],
-    ['davivienda','Davivienda'],['paypal','PayPal']
+    ['davivienda','Davivienda'],['paypal','PayPal'],
+    ['efectivo','💵 Efectivo']
   ];
   grid.innerHTML = campos.map(([k,label])=>`
     <div class="form-group">
@@ -2022,7 +2085,7 @@ function renderCuentas() {
   display.innerHTML = campos.map(([k,label])=>`
     <div class="account-chip">
       <div class="acc-name">${label}</div>
-      <div class="acc-val">${cop(state.cuentas[k])}</div>
+      <div class="acc-val">${cop(state.cuentas[k]||0)}</div>
     </div>`).join('') +
     `<div class="account-chip" style="border-color:var(--accent)">
       <div class="acc-name" style="color:var(--accent)">TOTAL</div>
@@ -2031,7 +2094,7 @@ function renderCuentas() {
 }
 
 function guardarCuentas() {
-  ['nequi','nequiNegocios','daviplata','bancolombia','davivienda','paypal'].forEach(k=>{
+  ['nequi','nequiNegocios','daviplata','bancolombia','davivienda','paypal','efectivo'].forEach(k=>{
     const el = document.getElementById('cta-'+k);
     if (el) state.cuentas[k] = Number(el.value)||0;
   });
@@ -2043,7 +2106,7 @@ function calcularTotales() {
   const totalIngresos = state.ingresos.reduce((s,i)=>s+i.monto,0);
   const totalGastos = state.gastos.reduce((s,g)=>s+g.monto,0);
   const c = state.cuentas;
-  const totalCuentas = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal;
+  const totalCuentas = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal+(c.efectivo||0);
   let totalAcciones=0;
   state.patrimonio.acciones.forEach(a=>{
     totalAcciones += a.precioActual?a.cantidad*a.precioActual:a.cantidad*a.precioCompra;
@@ -2942,7 +3005,7 @@ function renderContabilidad() {
 
   // ── 2. BALANCE GENERAL ──────────────────────────────────
   const c = state.cuentas;
-  const efectivo = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal;
+  const efectivo = c.nequi+c.nequiNegocios+c.daviplata+c.bancolombia+c.davivienda+c.paypal+(c.efectivo||0);
   let valorAcciones = 0;
   state.patrimonio.acciones.forEach(a=>{ valorAcciones += (a.precioActual||a.precioCompra)*a.cantidad; });
   const fondos = state.patrimonio.fondos.reduce((s,f)=>s+(f.saldo||0),0);
