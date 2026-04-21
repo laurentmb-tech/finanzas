@@ -605,6 +605,7 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
         <button class="tab-btn active" onclick="switchTab('acciones')">Acciones</button>
         <button class="tab-btn" onclick="switchTab('fondos')">Fondos / Ahorros LP</button>
         <button class="tab-btn" onclick="switchTab('activos-fijos')">🏠 Activos fijos</button>
+        <button class="tab-btn" onclick="switchTab('dividendos')">💰 Dividendos</button>
       </div>
 
       <div id="tab-acciones">
@@ -658,6 +659,36 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
           </table>
         </div>
       </div>
+
+      <!-- TAB DIVIDENDOS -->
+      <div id="tab-dividendos" style="display:none">
+        <div class="section-header" style="margin-bottom:12px">
+          <span style="font-size:13px;color:var(--text2)">Calendario de dividendos BVC</span>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="actualizarDividendosBVC()">↻ Cargar datos BVC</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-dividendo')">+ Agregar manual</button>
+          </div>
+        </div>
+        <div class="cards-grid" id="div-resumen" style="margin-bottom:16px"></div>
+        <div class="form-card" style="margin-bottom:16px">
+          <h3 style="font-size:13px;margin-bottom:12px;color:var(--text2)">📅 Próximos pagos</h3>
+          <div id="div-proximos"></div>
+        </div>
+        <div class="form-card">
+          <h3 style="font-size:13px;margin-bottom:12px;color:var(--text2)">📋 Calendario completo</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Acción</th><th>Cant.</th><th>Div/acción</th>
+                <th>Total a recibir</th><th>Ex-dividendo</th>
+                <th>Fecha pago</th><th>Días</th><th>Estado</th><th>Acc.</th>
+              </tr></thead>
+              <tbody id="tbody-dividendos"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <!-- KONRAD -->
@@ -1041,6 +1072,41 @@ td.action-col { font-family: 'DM Sans', sans-serif; display: flex; gap: 6px; ali
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modal-konrad')">Cancelar</button>
       <button class="btn btn-primary" onclick="registrarKonrad()">Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Dividendo -->
+<div class="modal-overlay" id="modal-dividendo">
+  <div class="modal">
+    <h3 id="modal-div-title">Agregar dividendo</h3>
+    <input type="hidden" id="div-edit-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Acción (símbolo)</label>
+        <select id="div-simbolo"></select>
+      </div>
+      <div class="form-group"><label>Dividendo por acción (COP)</label>
+        <input type="number" id="div-valor" placeholder="110">
+      </div>
+      <div class="form-group"><label>Fecha ex-dividendo</label>
+        <input type="date" id="div-ex-fecha">
+      </div>
+      <div class="form-group"><label>Fecha de pago</label>
+        <input type="date" id="div-fecha-pago">
+      </div>
+      <div class="form-group"><label>Cuota N°</label>
+        <input type="number" id="div-cuota-num" value="1" min="1">
+      </div>
+      <div class="form-group"><label>Total cuotas</label>
+        <input type="number" id="div-cuota-total" value="1" min="1">
+      </div>
+      <div class="form-group" style="grid-column:1/-1"><label>Notas</label>
+        <input type="text" id="div-notas" placeholder="Ej: Dividendo ordinario 2026">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modal-dividendo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarDividendo()">Guardar</button>
     </div>
   </div>
 </div>
@@ -2001,10 +2067,13 @@ function switchTab(tab) {
   document.getElementById('tab-acciones').style.display = tab==='acciones'?'block':'none';
   document.getElementById('tab-fondos').style.display = tab==='fondos'?'block':'none';
   document.getElementById('tab-activos-fijos').style.display = tab==='activos-fijos'?'block':'none';
+  document.getElementById('tab-dividendos').style.display = tab==='dividendos'?'block':'none';
   if (tab==='activos-fijos') renderActivosFijos();
+  if (tab==='dividendos') renderDividendos();
   document.querySelectorAll('.tab-btn').forEach((b,i)=>{
     b.classList.toggle('active',
-      (i===0&&tab==='acciones')||(i===1&&tab==='fondos')||(i===2&&tab==='activos-fijos'));
+      (i===0&&tab==='acciones')||(i===1&&tab==='fondos')||
+      (i===2&&tab==='activos-fijos')||(i===3&&tab==='dividendos'));
   });
 }
 
@@ -2846,6 +2915,251 @@ const DATOS_INICIALES = {
   meta: { version:"9.1", creadoEn:"2026-04-16", ultimaActualizacion:"2026-04-16" }
 };
 
+// ===== DIVIDENDOS BVC =====
+
+// Datos reales 2026 de dividendos BVC para tus acciones
+const DIVIDENDOS_BVC_2026 = [
+  // ECOPETROL — $110/acción, 1 cuota, pago 30 abril 2026
+  { simbolo:'ECOPETROL', valorPorAccion:110, exDividendo:'2026-04-24', fechaPago:'2026-04-30', cuota:1, totalCuotas:1, notas:'Dividendo ordinario 2026' },
+
+  // PFGRUPSURA — $2.000/acción en 4 cuotas de $500
+  { simbolo:'PFGRUPSURA', valorPorAccion:500, exDividendo:'2026-04-20', fechaPago:'2026-04-24', cuota:1, totalCuotas:4, notas:'Cuota 1/4 dividendo 2026' },
+  { simbolo:'PFGRUPSURA', valorPorAccion:500, exDividendo:'2026-07-10', fechaPago:'2026-07-16', cuota:2, totalCuotas:4, notas:'Cuota 2/4 dividendo 2026' },
+  { simbolo:'PFGRUPSURA', valorPorAccion:500, exDividendo:'2026-10-09', fechaPago:'2026-10-15', cuota:3, totalCuotas:4, notas:'Cuota 3/4 dividendo 2026' },
+  { simbolo:'PFGRUPSURA', valorPorAccion:500, exDividendo:'2026-12-18', fechaPago:'2027-01-15', cuota:4, totalCuotas:4, notas:'Cuota 4/4 dividendo 2026' },
+
+  // PFCIBEST — $4.512/acción en 4 cuotas de $1.128
+  { simbolo:'PFCIBEST', valorPorAccion:1128, exDividendo:'2026-04-08', fechaPago:'2026-04-14', cuota:1, totalCuotas:4, notas:'Cuota 1/4 dividendo 2026' },
+  { simbolo:'PFCIBEST', valorPorAccion:1128, exDividendo:'2026-07-07', fechaPago:'2026-07-13', cuota:2, totalCuotas:4, notas:'Cuota 2/4 dividendo 2026' },
+  { simbolo:'PFCIBEST', valorPorAccion:1128, exDividendo:'2026-10-06', fechaPago:'2026-10-12', cuota:3, totalCuotas:4, notas:'Cuota 3/4 dividendo 2026' },
+  { simbolo:'PFCIBEST', valorPorAccion:1128, exDividendo:'2026-12-01', fechaPago:'2026-12-07', cuota:4, totalCuotas:4, notas:'Cuota 4/4 dividendo 2026' },
+
+  // GRUPOSURA — $2.000/acción en 4 cuotas de $500
+  { simbolo:'GRUPOSURA', valorPorAccion:500, exDividendo:'2026-04-20', fechaPago:'2026-04-24', cuota:1, totalCuotas:4, notas:'Cuota 1/4 dividendo 2026' },
+  { simbolo:'GRUPOSURA', valorPorAccion:500, exDividendo:'2026-07-10', fechaPago:'2026-07-16', cuota:2, totalCuotas:4, notas:'Cuota 2/4 dividendo 2026' },
+  { simbolo:'GRUPOSURA', valorPorAccion:500, exDividendo:'2026-10-09', fechaPago:'2026-10-15', cuota:3, totalCuotas:4, notas:'Cuota 3/4 dividendo 2026' },
+  { simbolo:'GRUPOSURA', valorPorAccion:500, exDividendo:'2026-12-18', fechaPago:'2027-01-15', cuota:4, totalCuotas:4, notas:'Cuota 4/4 dividendo 2026' },
+];
+
+function actualizarDividendosBVC() {
+  if (!state.dividendos) state.dividendos = [];
+
+  let agregados = 0;
+  DIVIDENDOS_BVC_2026.forEach(d => {
+    // Verificar si la acción está en el portafolio
+    const accion = state.patrimonio.acciones.find(a =>
+      a.simbolo.toUpperCase() === d.simbolo.toUpperCase()
+    );
+    if (!accion) return;
+
+    // Verificar si ya existe este dividendo
+    const yaExiste = state.dividendos.find(x =>
+      x.simbolo === d.simbolo &&
+      x.fechaPago === d.fechaPago &&
+      x.cuota === d.cuota
+    );
+    if (yaExiste) return;
+
+    state.dividendos.push({
+      id: uid(),
+      simbolo: d.simbolo,
+      cantidad: accion.cantidad,
+      valorPorAccion: d.valorPorAccion,
+      totalEsperado: d.valorPorAccion * accion.cantidad,
+      exDividendo: d.exDividendo,
+      fechaPago: d.fechaPago,
+      cuota: d.cuota,
+      totalCuotas: d.totalCuotas,
+      notas: d.notas,
+      estado: 'pendiente',
+      totalRecibido: 0,
+      fuente: 'BVC'
+    });
+    agregados++;
+  });
+
+  saveAndRefresh();
+  renderDividendos();
+  if (agregados > 0) {
+    toast(`✅ ${agregados} dividendos BVC cargados para tu portafolio`);
+  } else {
+    toast('Ya tienes los dividendos BVC actualizados');
+  }
+}
+
+function poblarSelectAcciones() {
+  const sel = document.getElementById('div-simbolo');
+  if (!sel) return;
+  const acciones = state.patrimonio.acciones || [];
+  sel.innerHTML = acciones.map(a =>
+    `<option value="${a.simbolo}">${a.simbolo} (${a.cantidad} títulos)</option>`
+  ).join('');
+}
+
+function guardarDividendo() {
+  const simbolo = document.getElementById('div-simbolo').value;
+  const valor   = Number(document.getElementById('div-valor').value)||0;
+  const exFecha = document.getElementById('div-ex-fecha').value;
+  const fechaPago = document.getElementById('div-fecha-pago').value;
+  const cuota   = Number(document.getElementById('div-cuota-num').value)||1;
+  const totalCuotas = Number(document.getElementById('div-cuota-total').value)||1;
+  const notas   = document.getElementById('div-notas').value.trim();
+  const editId  = document.getElementById('div-edit-id').value;
+  if (!simbolo||!valor||!fechaPago) { toast('Completa símbolo, valor y fecha de pago','error'); return; }
+
+  if (!state.dividendos) state.dividendos = [];
+  const accion = state.patrimonio.acciones.find(a=>a.simbolo===simbolo);
+  const cantidad = accion?.cantidad || 0;
+
+  if (editId) {
+    const d = state.dividendos.find(x=>x.id==editId);
+    if (d) Object.assign(d, {simbolo,valorPorAccion:valor,totalEsperado:valor*cantidad,
+      exDividendo:exFecha,fechaPago,cuota,totalCuotas,notas});
+  } else {
+    state.dividendos.push({
+      id:uid(), simbolo, cantidad, valorPorAccion:valor,
+      totalEsperado:valor*cantidad, exDividendo:exFecha, fechaPago,
+      cuota, totalCuotas, notas, estado:'pendiente',
+      totalRecibido:0, fuente:'Manual'
+    });
+  }
+  closeModal('modal-dividendo');
+  document.getElementById('div-edit-id').value='';
+  saveAndRefresh(); renderDividendos(); toast('Dividendo guardado');
+}
+
+function marcarDividendoRecibido(id) {
+  if (!state.dividendos) return;
+  const d = state.dividendos.find(x=>x.id===id);
+  if (!d) return;
+  if (d.estado==='recibido') {
+    d.estado='pendiente'; d.totalRecibido=0; d.fechaRecibido=null;
+  } else {
+    d.estado='recibido';
+    d.totalRecibido=d.totalEsperado;
+    d.fechaRecibido=new Date().toISOString().slice(0,10);
+    // Registrar como ingreso automáticamente
+    state.ingresos.push({
+      id:uid(), fecha:d.fechaRecibido,
+      descripcion:`Dividendo ${d.simbolo} cuota ${d.cuota}/${d.totalCuotas}`,
+      monto:d.totalRecibido, categoria:'Inversiones', cuenta:'Bancolombia'
+    });
+    toast(`✅ $${cop(d.totalRecibido)} registrado como ingreso`);
+  }
+  saveAndRefresh(); renderDividendos();
+}
+
+function borrarDividendo(id) {
+  if (!state.dividendos) return;
+  state.dividendos = state.dividendos.filter(x=>x.id!==id);
+  saveAndRefresh(); renderDividendos(); toast('Eliminado');
+}
+
+function renderDividendos() {
+  if (!state.dividendos) state.dividendos = [];
+  poblarSelectAcciones();
+
+  const divs = state.dividendos;
+  const hoy = new Date().toISOString().slice(0,10);
+
+  // Resumen
+  const pendientes = divs.filter(d=>d.estado!=='recibido');
+  const recibidos  = divs.filter(d=>d.estado==='recibido');
+  const totalPend  = pendientes.reduce((s,d)=>s+d.totalEsperado,0);
+  const totalRec   = recibidos.reduce((s,d)=>s+d.totalRecibido,0);
+  const proximos7  = pendientes.filter(d=>d.fechaPago&&diasHasta(d.fechaPago)<=7&&diasHasta(d.fechaPago)>=0);
+
+  const resDiv = document.getElementById('div-resumen');
+  if (resDiv) resDiv.innerHTML = `
+    <div class="card yellow">
+      <div class="card-label">Por recibir (pendientes)</div>
+      <div class="card-value" style="color:var(--accent4)">${cop(totalPend)}</div>
+      <div class="card-sub">${pendientes.length} cuotas pendientes</div>
+    </div>
+    <div class="card green">
+      <div class="card-label">Ya recibido este año</div>
+      <div class="card-value positive">${cop(totalRec)}</div>
+      <div class="card-sub">${recibidos.length} pagos cobrados</div>
+    </div>
+    <div class="card blue">
+      <div class="card-label">Próximos 7 días</div>
+      <div class="card-value">${cop(proximos7.reduce((s,d)=>s+d.totalEsperado,0))}</div>
+      <div class="card-sub">${proximos7.length} pago(s) inminente(s)</div>
+    </div>
+    <div class="card green">
+      <div class="card-label">Total año 2026</div>
+      <div class="card-value positive">${cop(totalPend+totalRec)}</div>
+      <div class="card-sub">Pendiente + recibido</div>
+    </div>
+  `;
+
+  // Próximos pagos (lista visual)
+  const proxDiv = document.getElementById('div-proximos');
+  const prox = pendientes
+    .filter(d=>d.fechaPago && diasHasta(d.fechaPago) >= 0)
+    .sort((a,b)=>a.fechaPago.localeCompare(b.fechaPago))
+    .slice(0,5);
+
+  if (proxDiv) proxDiv.innerHTML = prox.length ? prox.map(d=>{
+    const dias = diasHasta(d.fechaPago);
+    const color = dias<=7?'var(--warning)':dias<=30?'var(--accent)':'var(--accent2)';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="min-width:48px;text-align:center;background:${color}22;border-radius:8px;padding:6px">
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:${color}">${dias}</div>
+        <div style="font-size:9px;color:${color}">días</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:500;color:var(--text)">${d.simbolo}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.notas} · Pago: ${d.fechaPago}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'DM Mono',monospace;color:var(--accent2);font-weight:500">+${cop(d.totalEsperado)}</div>
+        <div style="font-size:11px;color:var(--text3)">${cop(d.valorPorAccion)}/acción × ${d.cantidad}</div>
+      </div>
+      <button class="btn btn-success btn-sm" style="font-size:11px;padding:5px 10px" onclick="marcarDividendoRecibido(${d.id})">✓ Cobrar</button>
+    </div>`;
+  }).join('') : '<div class="empty-state" style="padding:20px">No hay pagos próximos pendientes</div>';
+
+  // Tabla completa
+  const tb = document.getElementById('tbody-dividendos');
+  if (!tb) return;
+  if (!divs.length) {
+    tb.innerHTML='<tr><td colspan="9" class="empty-state"><div class="icon">💰</div>Sin dividendos — toca "Cargar datos BVC" para importar tu calendario</td></tr>';
+    return;
+  }
+
+  const sorted = [...divs].sort((a,b)=>(a.fechaPago||'').localeCompare(b.fechaPago||''));
+  tb.innerHTML = sorted.map(d=>{
+    const dias = diasHasta(d.fechaPago);
+    const esRecibido = d.estado==='recibido';
+    const diasBadge = esRecibido
+      ? `<span class="badge badge-green">✓ Cobrado</span>`
+      : dias===null ? '—'
+      : dias<0 ? `<span class="badge badge-red">Vencido</span>`
+      : dias<=7 ? `<span class="badge badge-yellow">${dias}d</span>`
+      : `<span style="color:var(--text3);font-size:12px">${dias}d</span>`;
+    const estadoBadge = esRecibido
+      ? `<span class="badge badge-green">✅ Recibido</span>`
+      : `<span class="badge badge-yellow">⏳ Pendiente</span>`;
+    return `<tr style="${esRecibido?'opacity:0.6':''}">
+      <td><strong style="color:var(--accent)">${d.simbolo}</strong>
+        <div style="font-size:10px;color:var(--text3)">${d.notas||''}</div></td>
+      <td>${d.cantidad}</td>
+      <td style="font-family:'DM Mono',monospace">${cop(d.valorPorAccion)}</td>
+      <td style="color:var(--accent2);font-family:'DM Mono',monospace;font-weight:500">+${cop(d.totalEsperado)}</td>
+      <td style="font-size:12px">${d.exDividendo||'—'}</td>
+      <td style="font-size:12px">${d.fechaPago||'—'}</td>
+      <td>${diasBadge}</td>
+      <td>${estadoBadge}</td>
+      <td class="action-col">
+        <button class="btn btn-sm" style="border:1px solid ${esRecibido?'var(--border)':'var(--accent2)'};color:${esRecibido?'var(--text3)':'var(--accent2)'};background:transparent;padding:4px 8px;font-size:11px"
+          onclick="marcarDividendoRecibido(${d.id})">${esRecibido?'↩':'✓'}</button>
+        <button class="btn btn-danger" onclick="borrarDividendo(${d.id})">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
 // ===== ACTIVOS FIJOS =====
 function guardarActivoFijo() {
   const desc  = document.getElementById('af-desc').value.trim();
@@ -3231,6 +3545,8 @@ if (!state.ingresos.length && !state.gastos.length) {
   _guardarLocal();
 }
 if (!state.cierresMensuales) state.cierresMensuales = [];
+if (!state.pagosPendientes)  state.pagosPendientes  = [];
+if (!state.dividendos)       state.dividendos       = [];
 if (!state.meta) state.meta = { version:'9.1' };
 
 renderAll();
